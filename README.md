@@ -1,18 +1,24 @@
-# 🎬 Reel Transcriber
+# 🎬 Reel Transcriber & Translator
 
-Paste an Instagram reel link, get its thumbnail and a written transcript you can
-copy with one click — then hit **Start over** to do another.
+Paste an Instagram reel link, get its thumbnail, a written transcript, and an
+optional translation — each copyable with one click. Hit **Start over** to do
+another.
 
 ## How it works
 
-1. You paste a reel URL.
+1. You paste a reel URL and optionally pick a **Translate to** language.
 2. The backend uses [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) to grab the
    reel's thumbnail and download its audio.
 3. The audio is transcribed with Whisper:
    - **OpenAI Whisper API** if `OPENAI_API_KEY` is set (fast, no local model), or
    - a **local `faster-whisper`** model as an offline fallback.
-4. The UI shows the thumbnail + transcript with **Copy** and **Start over**
-   buttons.
+4. If a target language is chosen, the transcript is translated:
+   - via the **OpenAI API** (any supported language) when `OPENAI_API_KEY` is
+     set, or
+   - via Whisper's built-in **English** translation offline (other languages
+     require an API key).
+5. The UI shows the thumbnail, transcript, and translation, each with its own
+   **Copy** button, plus a **Start over** button.
 
 ## Requirements
 

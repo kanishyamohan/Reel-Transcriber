@@ -25,6 +25,14 @@
         />
         <button id="transcribe-btn">Transcribe</button>
       </div>
+      <div class="lang-row">
+        <label for="lang-select">Translate to</label>
+        <select id="lang-select">
+          {% for value, label in languages.items() %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <p id="error-msg" class="error hidden"></p>
     </section>
 
@@ -39,12 +47,21 @@
       <img id="thumbnail" class="thumbnail hidden" alt="Reel thumbnail" />
       <h2 id="result-title" class="result-title"></h2>
 
-      <div class="transcript-wrap">
+      <div class="block">
+        <h3>Transcript</h3>
         <textarea id="transcript" readonly></textarea>
+        <button class="copy-btn" data-target="transcript">📋 Copy transcript</button>
       </div>
 
+      <div id="translation-block" class="block hidden">
+        <h3 id="translation-heading">Translation</h3>
+        <textarea id="translation" readonly></textarea>
+        <button class="copy-btn" data-target="translation">📋 Copy translation</button>
+      </div>
+
+      <p id="note-msg" class="note hidden"></p>
+
       <div class="actions">
-        <button id="copy-btn">📋 Copy transcript</button>
         <button id="restart-btn" class="secondary">🔄 Start over</button>
       </div>
     </section>

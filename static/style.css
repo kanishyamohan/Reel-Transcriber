@@ -105,10 +105,62 @@ button.secondary {
   color: var(--text);
 }
 
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.lang-row label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+select {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #11111a;
+  color: var(--text);
+  font-size: 0.92rem;
+  outline: none;
+  cursor: pointer;
+}
+
+select:focus {
+  border-color: var(--accent);
+}
+
 .error {
   color: #ff6b6b;
   margin: 12px 0 0;
   font-size: 0.9rem;
+}
+
+.note {
+  color: var(--muted);
+  margin: 14px 0 0;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.block {
+  margin-bottom: 18px;
+}
+
+.block h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.copy-btn {
+  margin-top: 10px;
+  width: 100%;
 }
 
 .hidden {

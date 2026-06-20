@@ -29,6 +29,23 @@ INSTAGRAM_URL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Languages offered in the UI's "Translate to" dropdown. The empty value means
+# "no translation — original transcript only".
+SUPPORTED_LANGUAGES = {
+    "": "Original (no translation)",
+    "English": "English",
+    "Spanish": "Spanish",
+    "Hindi": "Hindi",
+    "French": "French",
+    "German": "German",
+    "Portuguese": "Portuguese",
+    "Italian": "Italian",
+    "Arabic": "Arabic",
+    "Russian": "Russian",
+    "Japanese": "Japanese",
+    "Chinese": "Chinese",
+}
+
 
 def is_valid_instagram_url(url: str) -> bool:
     return bool(url) and bool(INSTAGRAM_URL_RE.match(url.strip()))
@@ -84,14 +101,14 @@ def transcribe_with_openai(audio_path: str) -> str:
     return result.text.strip()
 
 
-def transcribe_locally(audio_path: str) -> str:
+def transcribe_locally(audio_path: str, task: str = "transcribe") -> str:
     global _local_model
     from faster_whisper import WhisperModel
 
     if _local_model is None:
         _local_model = WhisperModel(LOCAL_WHISPER_MODEL, compute_type="int8")
 
-    segments, _ = _local_model.transcribe(audio_path)
+    segments, _ = _local_model.transcribe(audio_path, task=task)
     return " ".join(seg.text.strip() for seg in segments).strip()
 
 
@@ -101,18 +118,68 @@ def transcribe(audio_path: str) -> str:
     return transcribe_locally(audio_path)
 
 
+def translate_with_openai(text: str, target_language: str) -> str:
+    from openai import OpenAI
+
+    client = OpenAI()
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a translator. Translate the user's text into "
+                    f"{target_language}. Return only the translation, with no "
+                    "preamble, notes, or quotation marks."
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+        temperature=0,
+    )
+    return resp.choices[0].message.content.strip()
+
+
+def translate_to_english_locally(audio_path: str) -> str:
+    """Whisper's local 'translate' task only ever targets English."""
+    return transcribe_locally(audio_path, task="translate")
+
+
+def translate(text: str, target_language: str, audio_path: str):
+    """Return (translation, note). note is set when we can't fully comply."""
+    if not target_language:
+        return None, None
+
+    if os.environ.get("OPENAI_API_KEY"):
+        return translate_with_openai(text, target_language), None
+
+    # Local fallback: Whisper can only translate speech to English.
+    if target_language.lower() == "english":
+        return translate_to_english_locally(audio_path), None
+
+    return (
+        None,
+        f"Translation to {target_language} needs OPENAI_API_KEY. "
+        "Without it, only English translation is available offline.",
+    )
+
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", languages=SUPPORTED_LANGUAGES)
 
 
 @app.route("/api/transcribe", methods=["POST"])
 def api_transcribe():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
+    target_language = (data.get("target_language") or "").strip()
 
     if not is_valid_instagram_url(url):
         return jsonify({"error": "Please paste a valid Instagram reel link."}), 400
+
+    if target_language and target_language not in SUPPORTED_LANGUAGES:
+        return jsonify({"error": "Unsupported target language."}), 400
 
     try:
         with tempfile.TemporaryDirectory() as workdir:
@@ -125,12 +192,16 @@ def api_transcribe():
                 )
 
             transcript = transcribe(audio_path)
+            translation, note = translate(transcript, target_language, audio_path)
 
         return jsonify(
             {
                 "thumbnail": thumbnail_url,
                 "title": title,
                 "transcript": transcript or "(No speech detected in this reel.)",
+                "translation": translation,
+                "target_language": target_language,
+                "note": note,
             }
         )
     except Exception as exc:  # noqa: BLE001 - surface a readable error to the UI
