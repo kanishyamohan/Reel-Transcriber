@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reel Transcriber</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>🎬 Reel Transcriber</h1>
+      <p class="subtitle">Paste an Instagram reel link and get a written transcript.</p>
+    </header>
+
+    <!-- Step 1: input -->
+    <section id="input-step">
+      <div class="input-row">
+        <input
+          id="url-input"
+          type="url"
+          placeholder="https://www.instagram.com/reel/..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="transcribe-btn">Transcribe</button>
+      </div>
+      <p id="error-msg" class="error hidden"></p>
+    </section>
+
+    <!-- Loading -->
+    <section id="loading-step" class="hidden">
+      <div class="spinner"></div>
+      <p>Fetching reel and transcribing… this can take a moment.</p>
+    </section>
+
+    <!-- Step 2: result -->
+    <section id="result-step" class="hidden">
+      <img id="thumbnail" class="thumbnail hidden" alt="Reel thumbnail" />
+      <h2 id="result-title" class="result-title"></h2>
+
+      <div class="transcript-wrap">
+        <textarea id="transcript" readonly></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="copy-btn">📋 Copy transcript</button>
+        <button id="restart-btn" class="secondary">🔄 Start over</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
