@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <style>
+      :root {
+        --bg: #f7f7f8;
+        --card: #ffffff;
+        --ink: #18181b;
+        --muted: #71717a;
+        --line: #e4e4e7;
+        --accent: #18181b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 16px;
+        background: var(--bg);
+        color: var(--ink);
+        font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      .card {
+        max-width: 460px;
+        margin: 0 auto;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 28px;
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+      p.sub { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+      ul.swatches { list-style: none; margin: 0 0 24px; padding: 0; }
+      ul.swatches li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      ul.swatches li:last-child { border-bottom: 0; }
+      .chip {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        flex: 0 0 auto;
+        border: 1px solid rgba(0,0,0,0.08);
+      }
+      .name { flex: 1 1 auto; font-weight: 500; }
+      .hex { color: var(--muted); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      button {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent);
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) { opacity: 0.88; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #status {
+        margin: 16px 0 0;
+        font-size: 14px;
+        min-height: 20px;
+        color: var(--muted);
+      }
+      #status.ok { color: #047857; }
+      #status.err { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Calendar Palette</h1>
+      <p class="sub">Creates these calendars if they are missing, then applies each colour.</p>
+
+      <ul class="swatches">
+        <? var palette = PALETTE; for (var i = 0; i < palette.length; i++) { ?>
+          <li>
+            <span class="chip" style="background: <?= palette[i].hex ?>"></span>
+            <span class="name"><?= palette[i].name ?></span>
+            <span class="hex"><?= palette[i].hex ?></span>
+          </li>
+        <? } ?>
+      </ul>
+
+      <button id="apply" onclick="applyPalette()">Apply palette</button>
+      <p id="status"></p>
+    </div>
+
+    <script>
+      function applyPalette() {
+        var button = document.getElementById('apply');
+        var status = document.getElementById('status');
+
+        button.disabled = true;
+        button.textContent = 'Applying…';
+        status.className = '';
+        status.textContent = 'Working on your calendars…';
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .applyPalette();
+      }
+
+      function onSuccess(result) {
+        var status = document.getElementById('status');
+        status.className = result && result.ok ? 'ok' : 'err';
+        status.textContent = (result && result.message) || 'Done.';
+        reset();
+      }
+
+      function onFailure(error) {
+        var status = document.getElementById('status');
+        status.className = 'err';
+        status.textContent = 'Failed: ' + (error && error.message ? error.message : error);
+        reset();
+      }
+
+      function reset() {
+        var button = document.getElementById('apply');
+        button.disabled = false;
+        button.textContent = 'Apply palette';
+      }
+    </script>
+  </body>
+</html>
