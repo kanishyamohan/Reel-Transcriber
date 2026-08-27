@@ -1,6 +1,10 @@
 /* ==========================================================================
    Reel Habit — desktop calendar habit tracker
-   Palette is token-driven so day / night mode is a single attribute swap.
+
+   Every colour resolves through a custom property that appearance.js writes
+   from the user's saved settings. The values below are only the boot-time
+   fallback for the split-second before that runs; changing them here does
+   not change the app's defaults (see DEFAULT_LOOK in store.js).
    ========================================================================== */
 
 :root {
@@ -8,48 +12,24 @@
   --surface:       #3a3a3c;
   --surface-hover: #4a4a4c;
   --outline:       #2c2c2e;
+  --sheet:         #2a2a2c;
   --title:         #b8b8b8;
   --text:          #d6d6d6;
-  --muted:         #8a8a8e;
-  --on-fill:       #17210d;
+  --muted:         rgba(214, 214, 214, 0.55);
+  --faint:         rgba(214, 214, 214, 0.12);
+  --streak:        #9be86f;
+  --ring:          #d6d6d6;
+  --danger:        #f0787d;
 
-  /* Status fills. p1 → p3 form a "more posts = deeper green" ramp. */
-  --p1:      #c8f7a0;
-  --p2:      #9be86f;
-  --p3:      #6bd644;
-  --missed:  #4a2b2b;
-  --missed-text: #ff9a9a;
-  --rest:    #33404f;
-  --rest-text:   #a8c4e6;
-  --streak:  #9be86f;
-
-  --ring:    #ffffff;
-  --shadow:  0 12px 32px rgba(0, 0, 0, 0.45);
-  --radius:  22px;
+  --bg-alpha:    1;
+  --radius:      22px;
   --tile-radius: 14px;
+  --shadow:      0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 :root[data-theme="light"] {
-  --bg:            #f4f4f6;
-  --surface:       #e3e3e8;
-  --surface-hover: #d6d6dd;
-  --outline:       #e9e9ee;
-  --title:         #9a9aa2;
-  --text:          #1c1c1e;
-  --muted:         #86868c;
-  --on-fill:       #16240a;
-
-  --p1:      #c4f299;
-  --p2:      #96e068;
-  --p3:      #63cc3d;
-  --missed:  #f9dede;
-  --missed-text: #b03a3a;
-  --rest:    #dde7f5;
-  --rest-text:   #40638f;
-  --streak:  #3f8f22;
-
-  --ring:    #1c1c1e;
-  --shadow:  0 12px 32px rgba(0, 0, 0, 0.16);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+  --danger: #c8393f;
 }
 
 * { box-sizing: border-box; }
@@ -73,11 +53,8 @@ html, body {
 body.standalone { background: var(--bg); }
 
 .widget {
+  position: relative;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 18px 20px 14px;
-  background: var(--bg);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -89,6 +66,26 @@ body.standalone .widget {
   margin: 0 auto;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* The painted background lives on its own layer so its opacity can drop
+   without taking the text down with it. */
+.widget-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--bg);
+  opacity: var(--bg-alpha);
+  pointer-events: none;
+}
+
+.widget-inner {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 14px;
 }
 
 /* ---------- window chrome ------------------------------------------------ */
@@ -172,7 +169,7 @@ body.standalone .widget {
   height: 7px;
   flex: none;
   border-radius: 50%;
-  background: var(--p1);
+  background: var(--streak);
 }
 
 .habit-name {
@@ -230,10 +227,7 @@ body.standalone .widget {
   gap: 6px;
 }
 
-.weekdays {
-  margin-bottom: 8px;
-  flex: none;
-}
+.weekdays { margin-bottom: 8px; flex: none; }
 
 .weekdays span {
   text-align: center;
@@ -256,18 +250,20 @@ body.standalone .widget {
   min-height: 0;
   padding: 0;
   border: 0;
-  border-radius: clamp(7px, 3.2cqi, var(--tile-radius));
+  border-radius: clamp(0px, 3.2cqi, var(--tile-radius));
   background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: clamp(11px, 3.6cqi, 19px);
   font-weight: 600;
   cursor: pointer;
-  transition: background 120ms ease, transform 120ms ease;
+  transition: filter 120ms ease, transform 120ms ease;
   -webkit-app-region: no-drag;
 }
 
-.tile:hover { background: var(--surface-hover); }
+/* Marked tiles get their colour inline from the status, so hover has to be
+   a filter rather than another background. */
+.tile:hover { filter: brightness(1.12); }
 .tile:active { transform: scale(0.94); }
 
 .tile:focus-visible {
@@ -283,7 +279,7 @@ body.standalone .widget {
   cursor: default;
 }
 
-.tile.pad:hover { background: transparent; }
+.tile.pad:hover { filter: none; }
 .tile.pad:active { transform: none; }
 
 /* Today gets a ring rather than a fill, so it reads alongside any status. */
@@ -297,19 +293,6 @@ body.standalone .widget {
   pointer-events: none;
 }
 
-.tile[data-status="p1"] { background: var(--p1); color: var(--on-fill); }
-.tile[data-status="p2"] { background: var(--p2); color: var(--on-fill); }
-.tile[data-status="p3"] { background: var(--p3); color: var(--on-fill); }
-.tile[data-status="missed"] { background: var(--missed); color: var(--missed-text); }
-.tile[data-status="rest"]   { background: var(--rest);   color: var(--rest-text); }
-
-.tile[data-status="p1"]:hover,
-.tile[data-status="p2"]:hover,
-.tile[data-status="p3"]:hover,
-.tile[data-status="missed"]:hover,
-.tile[data-status="rest"]:hover { filter: brightness(1.07); }
-
-/* Small badge for "posted more than once". */
 .tile .badge {
   position: absolute;
   top: 5px;
@@ -317,11 +300,11 @@ body.standalone .widget {
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
 @container (max-width: 340px) {
-  /* Too little room for the date and the badge to coexist. */
+  /* Too little room for the date and the tag to coexist. */
   .tile .badge { display: none; }
 }
 
@@ -338,7 +321,6 @@ body.standalone .widget {
   margin-top: 12px;
   font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.01em;
   color: var(--muted);
   flex: none;
   -webkit-app-region: drag;
@@ -351,20 +333,17 @@ body.standalone .widget {
 
 .menu {
   position: fixed;
-  z-index: 40;
-  min-width: 178px;
+  z-index: 60;
+  min-width: 190px;
+  max-width: 260px;
   padding: 5px;
   border-radius: 13px;
-  background: var(--surface);
+  background: var(--sheet);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
   -webkit-app-region: no-drag;
 }
 
-:root[data-theme="light"] .menu {
-  background: #ffffff;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
-}
-
+:root[data-theme="light"] .menu { box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18); }
 .menu[hidden] { display: none; }
 
 .menu-head {
@@ -373,6 +352,12 @@ body.standalone .widget {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--muted);
+}
+
+.menu-empty {
+  padding: 4px 9px 10px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 
@@ -395,8 +380,7 @@ body.standalone .widget {
 
 .menu-item:hover,
 .menu-item:focus-visible { background: var(--surface-hover); outline: none; }
-:root[data-theme="light"] .menu-item:hover,
-:root[data-theme="light"] .menu-item:focus-visible { background: #eeeef2; }
+.menu-item.danger { color: var(--danger); }
 
 .menu-item .swatch {
   width: 13px;
@@ -407,13 +391,17 @@ body.standalone .widget {
   box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.28);
 }
 
-.menu-item .label { flex: 1; }
+.menu-item .label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .menu-item .key {
   font-size: 10px;
   font-weight: 600;
   color: var(--muted);
-  opacity: 0.8;
 }
 
 .menu-item .check { font-size: 11px; color: var(--streak); }
@@ -425,12 +413,348 @@ body.standalone .widget {
   opacity: 0.1;
 }
 
+/* ---------- customise panel ---------------------------------------------- */
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: var(--radius);
+  -webkit-app-region: no-drag;
+}
+
+body.standalone .sheet { border-radius: 0; }
+.sheet[hidden] { display: none; }
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--faint);
+  flex: none;
+}
+
+.tabs { display: flex; gap: 2px; flex: 1; }
+
+.tab {
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--text); }
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 14px 18px;
+  overscroll-behavior: contain;
+}
+
+.section { padding: 12px 0 4px; border-bottom: 1px solid var(--faint); }
+.section:last-child { border-bottom: 0; }
+
+.section-title {
+  margin-bottom: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 8px 0 2px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.empty {
+  margin: 4px 0 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  margin-bottom: 6px;
+}
+
+.field-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* --- controls --- */
+
+.color-input {
+  width: 34px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(128, 128, 128, 0.45), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+
+.slider-row { display: flex; align-items: center; gap: 8px; }
+
+.slider {
+  width: 118px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 2px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+}
+
+.slider-value {
+  min-width: 34px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(128, 128, 128, 0.14);
+}
+
+.seg {
+  flex: 1;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seg:hover { color: var(--text); }
+
+/* The chosen segment is the raised, lighter one — same direction in both
+   themes, so it never reads as the unchosen option. */
+.seg[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.text-input,
+.select {
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  user-select: text;
+}
+
+.text-input:focus,
+.select:focus { outline: 2px solid var(--ring); outline-offset: 1px; }
+
+.select { cursor: pointer; font-size: 11px; }
+.badge-input { width: 52px; flex: none; text-align: center; }
+
+.btn {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { background: var(--surface-hover); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.subtle { background: transparent; box-shadow: inset 0 0 0 1px var(--faint); font-weight: 500; }
+.btn.subtle:hover { background: var(--surface); }
+.btn.wide { display: block; width: 100%; margin-top: 8px; }
+
+/* --- presets --- */
+
+.preset-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.preset:hover { background: var(--surface); color: var(--text); }
+
+.preset-chip {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.25);
+}
+
+.preset-dot {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.preset-name { font-size: 10px; font-weight: 600; }
+
+/* --- background image --- */
+
+.image-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  flex-wrap: wrap;
+}
+
+.image-preview {
+  width: 44px;
+  height: 28px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.3);
+}
+
+/* --- status rows --- */
+
+.status-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+.status-row {
+  padding: 8px;
+  border-radius: 11px;
+  background: rgba(128, 128, 128, 0.09);
+}
+
+.status-top,
+.status-bottom { display: flex; align-items: center; gap: 6px; }
+.status-top { margin-bottom: 6px; }
+.status-top .text-input { flex: 1; }
+.status-bottom .select { flex: 1; }
+
+.row-tools { display: flex; gap: 2px; flex: none; }
+
+.row-btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.row-btn svg { width: 12px; height: 12px; }
+.row-btn:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+.row-btn:disabled { opacity: 0.3; cursor: default; }
+.row-btn.danger:hover:not(:disabled) { color: var(--danger); }
+
+.row-key {
+  min-width: 38px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ---------- toast -------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 80;
+  max-width: 84%;
+  padding: 8px 13px;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  background: var(--sheet);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+.toast[hidden] { display: none; }
+
 /* ---------- resize grip -------------------------------------------------- */
 
 .resize-grip {
   position: absolute;
   right: 3px;
   bottom: 3px;
+  z-index: 50;
   width: 16px;
   height: 16px;
   display: grid;
