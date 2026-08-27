@@ -8,3 +8,7 @@ env/
 *.mp4
 .DS_Store
 .env
+
+# Electron / widget build output
+habit-widget/node_modules/
+habit-widget/dist/

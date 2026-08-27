@@ -1,0 +1,451 @@
+/* ==========================================================================
+   Reel Habit — desktop calendar habit tracker
+   Palette is token-driven so day / night mode is a single attribute swap.
+   ========================================================================== */
+
+:root {
+  --bg:            #1e1e1e;
+  --surface:       #3a3a3c;
+  --surface-hover: #4a4a4c;
+  --outline:       #2c2c2e;
+  --title:         #b8b8b8;
+  --text:          #d6d6d6;
+  --muted:         #8a8a8e;
+  --on-fill:       #17210d;
+
+  /* Status fills. p1 → p3 form a "more posts = deeper green" ramp. */
+  --p1:      #c8f7a0;
+  --p2:      #9be86f;
+  --p3:      #6bd644;
+  --missed:  #4a2b2b;
+  --missed-text: #ff9a9a;
+  --rest:    #33404f;
+  --rest-text:   #a8c4e6;
+  --streak:  #9be86f;
+
+  --ring:    #ffffff;
+  --shadow:  0 12px 32px rgba(0, 0, 0, 0.45);
+  --radius:  22px;
+  --tile-radius: 14px;
+}
+
+:root[data-theme="light"] {
+  --bg:            #f4f4f6;
+  --surface:       #e3e3e8;
+  --surface-hover: #d6d6dd;
+  --outline:       #e9e9ee;
+  --title:         #9a9aa2;
+  --text:          #1c1c1e;
+  --muted:         #86868c;
+  --on-fill:       #16240a;
+
+  --p1:      #c4f299;
+  --p2:      #96e068;
+  --p3:      #63cc3d;
+  --missed:  #f9dede;
+  --missed-text: #b03a3a;
+  --rest:    #dde7f5;
+  --rest-text:   #40638f;
+  --streak:  #3f8f22;
+
+  --ring:    #1c1c1e;
+  --shadow:  0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  /* The Electron window is transparent; the rounded .widget is the visible
+     surface, so the body itself must stay clear. */
+  background: transparent;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
+  user-select: none;
+  cursor: default;
+}
+
+/* Opened as a plain file in a browser there is no transparent host window,
+   so paint the page background too. */
+body.standalone { background: var(--bg); }
+
+.widget {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 14px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+body.standalone .widget {
+  max-width: 520px;
+  margin: 0 auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ---------- window chrome ------------------------------------------------ */
+
+.chrome {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  margin-bottom: 2px;
+  flex: none;
+}
+
+/* Dragging anywhere in the empty strip moves the whole widget. */
+.drag-zone {
+  flex: 1;
+  height: 100%;
+  -webkit-app-region: drag;
+}
+
+.chrome-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 140ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.widget:hover .chrome-actions,
+.chrome-actions:focus-within { opacity: 1; }
+
+.icon-btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.icon-btn:hover { background: var(--surface); color: var(--text); }
+.icon-btn svg { width: 13px; height: 13px; fill: currentColor; }
+.icon-btn[aria-pressed="true"] { color: var(--streak); }
+
+/* ---------- month title -------------------------------------------------- */
+
+.month-title {
+  margin: 0;
+  font-size: clamp(38px, 21cqi, 96px);
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--title);
+  -webkit-app-region: drag;
+  flex: none;
+}
+
+.subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 14px;
+  flex: none;
+}
+
+.habit-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.habit-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--p1);
+}
+
+.habit-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: 5px;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-app-region: no-drag;
+}
+
+.habit-name:hover { background: var(--surface); }
+.habit-name:focus { background: var(--surface); user-select: text; cursor: text; }
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  -webkit-app-region: no-drag;
+}
+
+.nav-btn {
+  height: 22px;
+  min-width: 22px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nav-btn:hover { background: var(--surface); color: var(--text); }
+.nav-btn svg { width: 12px; height: 12px; }
+.today-btn { padding: 0 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* ---------- calendar ----------------------------------------------------- */
+
+.weekdays,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.weekdays {
+  margin-bottom: 8px;
+  flex: none;
+}
+
+.weekdays span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: 1fr;
+}
+
+.tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: clamp(7px, 3.2cqi, var(--tile-radius));
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: clamp(11px, 3.6cqi, 19px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.tile:hover { background: var(--surface-hover); }
+.tile:active { transform: scale(0.94); }
+
+.tile:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Leading / trailing days from the neighbouring months. */
+.tile.pad {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--outline);
+  color: transparent;
+  cursor: default;
+}
+
+.tile.pad:hover { background: transparent; }
+.tile.pad:active { transform: none; }
+
+/* Today gets a ring rather than a fill, so it reads alongside any status. */
+.tile.today::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--ring);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.tile[data-status="p1"] { background: var(--p1); color: var(--on-fill); }
+.tile[data-status="p2"] { background: var(--p2); color: var(--on-fill); }
+.tile[data-status="p3"] { background: var(--p3); color: var(--on-fill); }
+.tile[data-status="missed"] { background: var(--missed); color: var(--missed-text); }
+.tile[data-status="rest"]   { background: var(--rest);   color: var(--rest-text); }
+
+.tile[data-status="p1"]:hover,
+.tile[data-status="p2"]:hover,
+.tile[data-status="p3"]:hover,
+.tile[data-status="missed"]:hover,
+.tile[data-status="rest"]:hover { filter: brightness(1.07); }
+
+/* Small badge for "posted more than once". */
+.tile .badge {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.65;
+}
+
+@container (max-width: 340px) {
+  /* Too little room for the date and the badge to coexist. */
+  .tile .badge { display: none; }
+}
+
+/* Days in the future can be marked, but they read as quieter. */
+.tile.future:not([data-status]) { opacity: 0.55; }
+
+/* ---------- footer ------------------------------------------------------- */
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  flex: none;
+  -webkit-app-region: drag;
+}
+
+.stats .sep { opacity: 0.45; }
+.stats .hot { color: var(--streak); }
+
+/* ---------- menus -------------------------------------------------------- */
+
+.menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 178px;
+  padding: 5px;
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+  -webkit-app-region: no-drag;
+}
+
+:root[data-theme="light"] .menu {
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+}
+
+.menu[hidden] { display: none; }
+
+.menu-head {
+  padding: 6px 9px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible { background: var(--surface-hover); outline: none; }
+:root[data-theme="light"] .menu-item:hover,
+:root[data-theme="light"] .menu-item:focus-visible { background: #eeeef2; }
+
+.menu-item .swatch {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.28);
+}
+
+.menu-item .label { flex: 1; }
+
+.menu-item .key {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.menu-item .check { font-size: 11px; color: var(--streak); }
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 7px;
+  background: currentColor;
+  opacity: 0.1;
+}
+
+/* ---------- resize grip -------------------------------------------------- */
+
+.resize-grip {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  opacity: 0;
+  cursor: nwse-resize;
+  transition: opacity 140ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.widget:hover .resize-grip { opacity: 0.5; }
+.resize-grip svg { width: 11px; height: 11px; }
+body.standalone .resize-grip { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "reel-habit-widget",
+  "productName": "Reel Habit",
+  "version": "1.0.0",
+  "description": "A macOS desktop calendar habit tracker widget for tracking daily reel posts.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.reelhabit.widget",
+    "productName": "Reel Habit",
+    "files": ["main.js", "preload.js", "renderer/**/*"],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    }
+  }
+}
