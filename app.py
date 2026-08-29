@@ -1,11 +1,12 @@
 """Reel Transcriber — Flask backend.
 
 Flow:
-  1. User pastes an Instagram reel link.
-  2. We use yt-dlp to grab the reel's thumbnail and download its audio.
+  1. User pastes one Instagram reel link (single mode) or a list of them (bulk).
+  2. We use yt-dlp to grab each reel's thumbnail and download its audio.
   3. We transcribe the audio to text (OpenAI Whisper API if OPENAI_API_KEY is
-     set, otherwise a local faster-whisper model).
-  4. The frontend shows the thumbnail + transcript, with copy / restart buttons.
+     set, otherwise a local faster-whisper model) and optionally translate it.
+  4. The frontend shows the thumbnail + transcript, with copy / share / restart
+     buttons; bulk mode adds one card per reel plus copy-all and download-all.
 """
 
 import os
@@ -20,6 +21,10 @@ app = Flask(__name__)
 # tradeoff; override with WHISPER_MODEL if you want something bigger/smaller.
 LOCAL_WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base")
 
+# Upper bound on how many reels one bulk request may ask for. Each reel means a
+# download + a transcription, so this keeps a single request from running away.
+MAX_BULK_URLS = int(os.environ.get("MAX_BULK_URLS", "25"))
+
 # Lazily-initialised local model so startup stays fast and we only pay the load
 # cost when we actually need the offline fallback.
 _local_model = None
@@ -28,6 +33,9 @@ INSTAGRAM_URL_RE = re.compile(
     r"https?://(www\.)?instagram\.com/(reel|reels|p|tv)/[\w\-]+",
     re.IGNORECASE,
 )
+
+# Splits a pasted blob of links on newlines, commas, or plain whitespace.
+URL_SEPARATOR_RE = re.compile(r"[\s,]+")
 
 # Languages offered in the UI's "Translate to" dropdown. The empty value means
 # "no translation — original transcript only".
@@ -49,6 +57,22 @@ SUPPORTED_LANGUAGES = {
 
 def is_valid_instagram_url(url: str) -> bool:
     return bool(url) and bool(INSTAGRAM_URL_RE.match(url.strip()))
+
+
+def parse_urls(raw) -> list:
+    """Turn a pasted blob (or a JSON list) of links into a deduped URL list."""
+    if isinstance(raw, list):
+        candidates = [str(item).strip() for item in raw]
+    else:
+        candidates = URL_SEPARATOR_RE.split((raw or "").strip())
+
+    seen = set()
+    urls = []
+    for candidate in candidates:
+        if candidate and candidate not in seen:
+            seen.add(candidate)
+            urls.append(candidate)
+    return urls
 
 
 def fetch_reel(url: str, workdir: str):
@@ -164,9 +188,35 @@ def translate(text: str, target_language: str, audio_path: str):
     )
 
 
+def process_reel(url: str, target_language: str) -> dict:
+    """Download, transcribe, and optionally translate one reel."""
+    with tempfile.TemporaryDirectory() as workdir:
+        audio_path, thumbnail_url, title = fetch_reel(url, workdir)
+
+        if not audio_path or not os.path.exists(audio_path):
+            raise RuntimeError("Couldn't download audio from that reel.")
+
+        transcript = transcribe(audio_path)
+        translation, note = translate(transcript, target_language, audio_path)
+
+    return {
+        "url": url,
+        "thumbnail": thumbnail_url,
+        "title": title,
+        "transcript": transcript or "(No speech detected in this reel.)",
+        "translation": translation,
+        "target_language": target_language,
+        "note": note,
+    }
+
+
 @app.route("/")
 def index():
-    return render_template("index.html", languages=SUPPORTED_LANGUAGES)
+    return render_template(
+        "index.html",
+        languages=SUPPORTED_LANGUAGES,
+        max_bulk_urls=MAX_BULK_URLS,
+    )
 
 
 @app.route("/api/transcribe", methods=["POST"])
@@ -182,30 +232,66 @@ def api_transcribe():
         return jsonify({"error": "Unsupported target language."}), 400
 
     try:
-        with tempfile.TemporaryDirectory() as workdir:
-            audio_path, thumbnail_url, title = fetch_reel(url, workdir)
-
-            if not audio_path or not os.path.exists(audio_path):
-                return (
-                    jsonify({"error": "Couldn't download audio from that reel."}),
-                    502,
-                )
-
-            transcript = transcribe(audio_path)
-            translation, note = translate(transcript, target_language, audio_path)
-
-        return jsonify(
-            {
-                "thumbnail": thumbnail_url,
-                "title": title,
-                "transcript": transcript or "(No speech detected in this reel.)",
-                "translation": translation,
-                "target_language": target_language,
-                "note": note,
-            }
-        )
+        return jsonify(process_reel(url, target_language))
     except Exception as exc:  # noqa: BLE001 - surface a readable error to the UI
         return jsonify({"error": f"Failed to process reel: {exc}"}), 500
+
+
+@app.route("/api/transcribe/bulk", methods=["POST"])
+def api_transcribe_bulk():
+    """Transcribe many reels in one call.
+
+    The web UI drives bulk mode one reel at a time so it can show live
+    progress; this endpoint is the equivalent for scripts and integrations.
+    Individual failures are reported per URL instead of failing the batch.
+    """
+    data = request.get_json(silent=True) or {}
+    urls = parse_urls(data.get("urls"))
+    target_language = (data.get("target_language") or "").strip()
+
+    if not urls:
+        return jsonify({"error": "Please provide at least one reel link."}), 400
+
+    if len(urls) > MAX_BULK_URLS:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        f"Too many links — {MAX_BULK_URLS} is the maximum per "
+                        f"batch (got {len(urls)})."
+                    )
+                }
+            ),
+            400,
+        )
+
+    if target_language and target_language not in SUPPORTED_LANGUAGES:
+        return jsonify({"error": "Unsupported target language."}), 400
+
+    results = []
+    for url in urls:
+        if not is_valid_instagram_url(url):
+            results.append(
+                {"url": url, "ok": False, "error": "Not a valid Instagram reel link."}
+            )
+            continue
+
+        try:
+            result = process_reel(url, target_language)
+            result["ok"] = True
+            results.append(result)
+        except Exception as exc:  # noqa: BLE001 - one bad reel shouldn't kill the batch
+            results.append({"url": url, "ok": False, "error": str(exc)})
+
+    succeeded = sum(1 for r in results if r["ok"])
+    return jsonify(
+        {
+            "results": results,
+            "count": len(results),
+            "succeeded": succeeded,
+            "failed": len(results) - succeeded,
+        }
+    )
 
 
 if __name__ == "__main__":

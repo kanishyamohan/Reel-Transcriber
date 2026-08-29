@@ -231,3 +231,189 @@ textarea {
 .actions button {
   flex: 1;
 }
+
+/* ------------------------------------------------------------ mode tabs */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 22px;
+  background: #11111a;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.tab.active {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: white;
+}
+
+button.small {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------- bulk: input */
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.links-input {
+  min-height: 140px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------ bulk: progress */
+
+.progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 99px;
+  background: #11111a;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-bar {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s ease;
+}
+
+.summary {
+  margin: 16px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------- bulk: cards */
+
+.bulk-results {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bulk-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #11111a;
+}
+
+.bulk-card.active {
+  border-color: var(--accent);
+}
+
+.bulk-card.failed {
+  border-color: #6b2b2b;
+}
+
+.bulk-card.pending {
+  opacity: 0.75;
+}
+
+.bulk-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.bulk-card-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-card-status {
+  flex: none;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bulk-card.failed .bulk-card-status {
+  color: #ff6b6b;
+}
+
+.bulk-card-body {
+  margin-top: 12px;
+}
+
+.bulk-card-link {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-card-text {
+  min-height: 120px;
+  font-size: 0.88rem;
+}
+
+.bulk-card .actions {
+  margin-top: 10px;
+}
+
+.bulk-card .error {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .actions {
+    flex-wrap: wrap;
+  }
+}

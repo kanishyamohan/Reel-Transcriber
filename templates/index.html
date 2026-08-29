@@ -10,61 +10,131 @@
   <main class="card">
     <header>
       <h1>🎬 Reel Transcriber</h1>
-      <p class="subtitle">Paste an Instagram reel link and get a written transcript.</p>
+      <p class="subtitle">Paste a reel link and get a written transcript you can copy or share.</p>
     </header>
 
-    <!-- Step 1: input -->
-    <section id="input-step">
-      <div class="input-row">
-        <input
-          id="url-input"
-          type="url"
-          placeholder="https://www.instagram.com/reel/..."
-          autocomplete="off"
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-mode="single" role="tab">One reel</button>
+      <button class="tab" data-mode="bulk" role="tab">Bulk</button>
+    </div>
+
+    <!-- ------------------------------------------------ single reel mode -->
+    <div id="single-mode">
+      <!-- Step 1: input -->
+      <section id="input-step">
+        <div class="input-row">
+          <input
+            id="url-input"
+            type="url"
+            placeholder="https://www.instagram.com/reel/..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="transcribe-btn">Transcribe</button>
+        </div>
+        <div class="lang-row">
+          <label for="lang-select">Translate to</label>
+          <select id="lang-select">
+            {% for value, label in languages.items() %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <p id="error-msg" class="error hidden"></p>
+      </section>
+
+      <!-- Loading -->
+      <section id="loading-step" class="hidden">
+        <div class="spinner"></div>
+        <p>Fetching reel and transcribing… this can take a moment.</p>
+      </section>
+
+      <!-- Step 2: result -->
+      <section id="result-step" class="hidden">
+        <img id="thumbnail" class="thumbnail hidden" alt="Reel thumbnail" />
+        <h2 id="result-title" class="result-title"></h2>
+
+        <div class="block">
+          <h3>Transcript</h3>
+          <textarea id="transcript" readonly></textarea>
+          <div class="actions">
+            <button class="copy-btn" data-target="transcript">📋 Copy transcript</button>
+            <button class="share-btn secondary" data-target="transcript">🔗 Share</button>
+          </div>
+        </div>
+
+        <div id="translation-block" class="block hidden">
+          <h3 id="translation-heading">Translation</h3>
+          <textarea id="translation" readonly></textarea>
+          <div class="actions">
+            <button class="copy-btn" data-target="translation">📋 Copy translation</button>
+            <button class="share-btn secondary" data-target="translation">🔗 Share</button>
+          </div>
+        </div>
+
+        <p id="note-msg" class="note hidden"></p>
+        <p id="share-status" class="note hidden"></p>
+
+        <div class="actions">
+          <button id="restart-btn">✨ New transcript</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ------------------------------------------------------- bulk mode -->
+    <div id="bulk-mode" class="hidden">
+      <!-- Step 1: paste many links -->
+      <section id="bulk-input-step">
+        <label class="field-label" for="bulk-input">
+          Reel links — one per line (up to {{ max_bulk_urls }})
+        </label>
+        <textarea
+          id="bulk-input"
+          class="links-input"
+          data-max="{{ max_bulk_urls }}"
           spellcheck="false"
-        />
-        <button id="transcribe-btn">Transcribe</button>
-      </div>
-      <div class="lang-row">
-        <label for="lang-select">Translate to</label>
-        <select id="lang-select">
-          {% for value, label in languages.items() %}
-          <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <p id="error-msg" class="error hidden"></p>
-    </section>
+          placeholder="https://www.instagram.com/reel/AAA...&#10;https://www.instagram.com/reel/BBB...&#10;https://www.instagram.com/reel/CCC..."
+        ></textarea>
+        <p id="bulk-count" class="hint">0 links detected</p>
 
-    <!-- Loading -->
-    <section id="loading-step" class="hidden">
-      <div class="spinner"></div>
-      <p>Fetching reel and transcribing… this can take a moment.</p>
-    </section>
+        <div class="lang-row">
+          <label for="bulk-lang-select">Translate to</label>
+          <select id="bulk-lang-select">
+            {% for value, label in languages.items() %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <!-- Step 2: result -->
-    <section id="result-step" class="hidden">
-      <img id="thumbnail" class="thumbnail hidden" alt="Reel thumbnail" />
-      <h2 id="result-title" class="result-title"></h2>
+        <div class="actions">
+          <button id="bulk-start-btn">Transcribe all</button>
+        </div>
+        <p id="bulk-error" class="error hidden"></p>
+      </section>
 
-      <div class="block">
-        <h3>Transcript</h3>
-        <textarea id="transcript" readonly></textarea>
-        <button class="copy-btn" data-target="transcript">📋 Copy transcript</button>
-      </div>
+      <!-- Step 2: run — progress plus results as they land -->
+      <section id="bulk-run-step" class="hidden">
+        <div class="progress-head">
+          <span id="bulk-progress-label">Starting…</span>
+          <button id="bulk-cancel-btn" class="secondary small">Stop</button>
+        </div>
+        <div class="progress-track"><div id="bulk-progress-bar" class="progress-bar"></div></div>
 
-      <div id="translation-block" class="block hidden">
-        <h3 id="translation-heading">Translation</h3>
-        <textarea id="translation" readonly></textarea>
-        <button class="copy-btn" data-target="translation">📋 Copy translation</button>
-      </div>
+        <div id="bulk-results" class="bulk-results"></div>
 
-      <p id="note-msg" class="note hidden"></p>
+        <p id="bulk-summary" class="summary hidden"></p>
+        <p id="bulk-share-status" class="note hidden"></p>
 
-      <div class="actions">
-        <button id="restart-btn" class="secondary">🔄 Start over</button>
-      </div>
-    </section>
+        <div id="bulk-actions" class="actions hidden">
+          <button id="bulk-copy-all-btn" class="secondary">📋 Copy all</button>
+          <button id="bulk-download-btn" class="secondary">⬇️ Download</button>
+          <button id="bulk-share-all-btn" class="secondary">🔗 Share all</button>
+        </div>
+        <div id="bulk-restart-actions" class="actions hidden">
+          <button id="bulk-restart-btn">✨ New batch</button>
+        </div>
+      </section>
+    </div>
   </main>
 
   <script src="{{ url_for('static', filename='app.js') }}"></script>
