@@ -49,3 +49,9 @@ Then open http://localhost:5000.
   (`pip install -U yt-dlp`) if downloads start failing.
 - The downloaded audio is written to a temporary directory and deleted after
   each request.
+
+## Also in this repo: Invoice Maker
+
+[`invoice-maker/`](invoice-maker/) is a standalone page for making invoices:
+type the customer and the price, and the dates, invoice ID and your details
+fill themselves. See [`invoice-maker/README.md`](invoice-maker/README.md).
