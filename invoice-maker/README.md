@@ -17,7 +17,8 @@ rows, and payment information. It is saved as
 
 ## Use it
 
-Open `index.html` in a browser. Nothing needs installing; the page loads two
+Online: **https://kanishyamohan.github.io/Reel-Transcriber/** (GitHub Pages,
+once it is turned on; see *Hosting* below). Or open `index.html` in a browser. Nothing needs installing; the page loads two
 small libraries (html2canvas and jsPDF) and its fonts from public CDNs.
 
 1. The first time, click the person icon (top right of the form) and fill in
@@ -30,3 +31,16 @@ small libraries (html2canvas and jsPDF) and its fonts from public CDNs.
 
 Your details, customers and past invoices are kept in the browser's
 `localStorage`. Nothing personal is stored in this repository.
+
+## Hosting (GitHub Pages)
+
+The repo root has an `index.html` that forwards to `invoice-maker/`, and a
+`.nojekyll` file so GitHub serves the files exactly as they are.
+
+To turn it on: **Settings → Pages → Build and deployment → Source: Deploy from
+a branch**, pick the branch that holds this folder and `/ (root)`, then
+**Save**. After a minute or two the site is live at
+`https://<user>.github.io/<repo>/`.
+
+Anyone with the link can use the page, but everything they type stays in
+their own browser. Your details are never on the site itself.
