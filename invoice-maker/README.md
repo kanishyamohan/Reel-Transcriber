@@ -10,6 +10,11 @@ A single-page invoice generator. You type the **customer name** and the
 - **Customer address and GST number**: remembered after the first invoice for that customer
 - **Item names**: suggested from past invoices
 
+Pages: **Create** (form + live preview, Save as Draft, Download PDF),
+**Invoices** (every invoice with Draft / Sent / Overdue / Paid status and
+totals), **Customers** (edit or delete saved customers) and **Your details**.
+Discount, GST % and notes to the customer are optional.
+
 The PDF follows the layout of the original Canva invoice: big "Invoice"
 heading, billed-to block, Description / Rate / Qty / Amount table with GST
 rows, and payment information. It is saved as
@@ -21,13 +26,13 @@ Online: **https://kanishyamohan.github.io/Reel-Transcriber/** (GitHub Pages,
 once it is turned on; see *Hosting* below). Or open `index.html` in a browser. Nothing needs installing; the page loads two
 small libraries (html2canvas and jsPDF) and its fonts from public CDNs.
 
-1. The first time, click the person icon (top right of the form) and fill in
-   **Your details**. They are saved in this browser.
+1. The first time, the page opens on **Your details**. Fill them in once;
+   they are saved in this browser.
 2. Type the customer's name. A saved customer fills in by itself. A new
    customer asks for an address and GST number once.
 3. Type what you did and the price. Turn on **Add GST** if you need it.
-4. Click **Download PDF**. The invoice is added to **Recent invoices**, so you
-   can open it again and download it again later.
+4. Click **Download PDF** (or **Save as Draft**). The invoice is listed under
+   **Invoices**, where you can reopen it or mark it paid.
 
 Your details, customers and past invoices are kept in the browser's
 `localStorage`. Nothing personal is stored in this repository.
