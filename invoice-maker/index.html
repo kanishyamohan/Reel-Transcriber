@@ -140,6 +140,13 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .row { display: grid; gap: 12px; }
 .row.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .row.c2 { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.row.c-top { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.15fr) minmax(0, .75fr); }
+.row.c-half { grid-template-columns: 1fr 1fr; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--info-bg); color: var(--muted); margin-left: 6px; vertical-align: 1px; }
+.sub-h { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 4px 0 -4px; }
+.mode-note { display: flex; gap: 10px; align-items: flex-start; background: var(--shell); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); }
+.mode-note b { color: var(--fg); font-weight: 600; }
+@media (max-width: 560px) { .row.c-top { grid-template-columns: 1fr 1fr; } .row.c-top > :first-child { grid-column: 1 / -1; } .row.c-half { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .row.c3 { grid-template-columns: 1fr 1fr; } .row.c3 > :last-child { grid-column: 1 / -1; } .row.c2 { grid-template-columns: 1fr; } }
 .icon-in { position: absolute; right: 6px; bottom: 5px; border: 0; background: var(--sunken); color: var(--muted); border-radius: 7px; padding: 5px 8px; font-size: 11.5px; font-weight: 600; }
 .icon-in:hover { color: var(--fg); }
@@ -284,7 +291,8 @@ table.list tr.click:hover td { background: var(--shell); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M4 14c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M6.5 18.5c1.8-1.2 3.7-1.2 5.5 0s3.7 1.2 5.5 0"/></svg>
     </div>
     <div class="tabs" role="tablist">
-      <button class="tab" data-go="create" aria-current="page">Create</button>
+      <button class="tab" data-go="create" data-mode="dom" aria-current="page">Domestic</button>
+      <button class="tab" data-go="create" data-mode="intl">International</button>
       <button class="tab" data-go="invoices">Invoices</button>
       <button class="tab" data-go="customers">Customers</button>
       <button class="tab" data-go="details">Your details</button>
@@ -311,7 +319,9 @@ table.list tr.click:hover td { background: var(--shell); }
       <form class="panel" id="form" autocomplete="off" novalidate>
         <div class="panel-h"><h2>Invoice Details</h2><button type="button" class="linkish" id="new-inv">Start a new one</button></div>
         <div class="panel-b">
-          <div class="row c2">
+          <div class="mode-note" id="mode-note" hidden><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+            <span><b>International invoice.</b> No GST rows, the client's country and VAT/EIN, and your international bank details (SWIFT, or your USD/GBP account if you added one).</span></div>
+          <div class="row c-top">
             <div class="f" id="cust-wrap">
               <label for="cust-name">Customer<span class="req">*</span></label>
               <input class="inp" id="cust-name" placeholder="Type a customer name" aria-autocomplete="list" aria-controls="cust-menu">
@@ -322,15 +332,25 @@ table.list tr.click:hover td { background: var(--shell); }
               <input class="inp" id="inv-id" style="padding-right:78px">
               <button type="button" class="icon-in" id="gen-id" title="Next free number">Generate</button>
             </div>
+            <div class="f">
+              <label for="currency">Currency</label>
+              <select class="inp" id="currency"></select>
+            </div>
           </div>
           <div class="f">
             <label for="cust-address">Billing Address<span class="req">*</span></label>
             <textarea class="inp" id="cust-address" rows="3" placeholder="Street, area, city - PIN, state"></textarea>
             <p class="hint" id="cust-hint">Saved customers fill this in. A new customer's address is remembered for next time.</p>
           </div>
-          <div class="f">
-            <label for="cust-gstin">Customer GST Number</label>
-            <input class="inp" id="cust-gstin" placeholder="Optional, e.g. 29ABCDE1234F1Z5">
+          <div class="row c-half" id="tax-id-row">
+            <div class="f" id="country-f" hidden>
+              <label for="country">Client Country<span class="req">*</span></label>
+              <select class="inp" id="country"></select>
+            </div>
+            <div class="f" id="gstin-f" style="grid-column:1 / -1">
+              <label for="cust-gstin" id="gstin-lbl">Customer GST Number</label>
+              <input class="inp" id="cust-gstin" placeholder="Optional, e.g. 29ABCDE1234F1Z5">
+            </div>
           </div>
           <div class="row c3">
             <div class="f">
@@ -371,7 +391,7 @@ table.list tr.click:hover td { background: var(--shell); }
           <div class="row c3">
             <div class="f">
               <label for="discount">Discount</label>
-              <div class="affix"><span class="pre">₹</span><input class="inp has-pre num" id="discount" inputmode="decimal" placeholder="0"></div>
+              <div class="affix"><span class="pre cur">₹</span><input class="inp has-pre num" id="discount" inputmode="decimal" placeholder="0"></div>
             </div>
             <div class="f">
               <label for="gst-pct" id="gst-lbl">Tax (GST %)</label>
@@ -379,10 +399,15 @@ table.list tr.click:hover td { background: var(--shell); }
             </div>
             <div class="f">
               <label for="total">Total</label>
-              <div class="affix"><span class="pre">₹</span><input class="inp has-pre num" id="total" readonly tabindex="-1"></div>
+              <div class="affix"><span class="pre cur">₹</span><input class="inp has-pre num" id="total" readonly tabindex="-1"></div>
             </div>
           </div>
           <p class="hint" id="tax-hint" hidden></p>
+          <div class="f" id="fx-f" hidden>
+            <label for="fx" id="fx-lbl">Exchange rate (₹ per 1 USD)</label>
+            <div class="affix"><span class="pre">₹</span><input class="inp has-pre num" id="fx" inputmode="decimal" placeholder="Optional, for your records"></div>
+            <p class="hint" id="fx-hint">Not printed on the invoice. Shows the rupee value in your invoice list.</p>
+          </div>
 
           <div class="f">
             <label for="notes">Notes to Customer</label>
@@ -462,6 +487,36 @@ table.list tr.click:hover td { background: var(--shell); }
           </div>
         </div>
         <div class="panel">
+          <div class="panel-h"><h2>International Payments</h2><span class="note">Used on International invoices</span></div>
+          <div class="panel-b">
+            <p class="hint">Fill in what you use. A USD invoice shows your USD account if you add one, a GBP invoice your GBP account; anything else shows your Indian bank with its SWIFT code.</p>
+            <p class="sub-h">Wire to your Indian bank</p>
+            <div class="row c-half">
+              <div class="f"><label for="s-swift">SWIFT / BIC code</label><input class="inp" id="s-swift" placeholder="e.g. ICICINBBXXX"></div>
+              <div class="f"><label for="s-bankaddr">Bank branch address</label><input class="inp" id="s-bankaddr"></div>
+            </div>
+            <p class="sub-h">USD account (e.g. Wise, Payoneer)</p>
+            <div class="row c-half">
+              <div class="f"><label for="s-usdbank">Bank name</label><input class="inp" id="s-usdbank"></div>
+              <div class="f"><label for="s-usdacc">Account number</label><input class="inp" id="s-usdacc" inputmode="numeric"></div>
+            </div>
+            <div class="row c-half">
+              <div class="f"><label for="s-usdach">ACH routing number</label><input class="inp" id="s-usdach" inputmode="numeric"></div>
+              <div class="f"><label for="s-usdwire">Wire routing number</label><input class="inp" id="s-usdwire" inputmode="numeric"></div>
+            </div>
+            <p class="sub-h">GBP account</p>
+            <div class="row c-half">
+              <div class="f"><label for="s-gbpbank">Bank name</label><input class="inp" id="s-gbpbank"></div>
+              <div class="f"><label for="s-gbpacc">Account number</label><input class="inp" id="s-gbpacc" inputmode="numeric"></div>
+            </div>
+            <div class="row c-half">
+              <div class="f"><label for="s-gbpsort">Sort code</label><input class="inp" id="s-gbpsort" placeholder="00-00-00"></div>
+              <div class="f"><label for="s-gbpiban">IBAN</label><input class="inp" id="s-gbpiban"></div>
+            </div>
+            <div class="f"><label for="s-payother">Other ways to pay</label><textarea class="inp" id="s-payother" rows="2" placeholder="e.g. PayPal: you@email.com"></textarea></div>
+          </div>
+        </div>
+        <div class="panel">
           <div class="panel-h"><h2>Defaults</h2></div>
           <div class="panel-b">
             <div class="row c2" style="grid-template-columns:1fr 1fr">
@@ -472,7 +527,10 @@ table.list tr.click:hover td { background: var(--shell); }
                 </select></div>
               <div class="f"><label for="s-prefix">Invoice No. prefix</label><input class="inp" id="s-prefix" placeholder="INV"></div>
             </div>
-            <div class="f"><label for="s-gst">Default GST %</label><input class="inp" id="s-gst" inputmode="decimal" placeholder="0"></div>
+            <div class="row c-half">
+              <div class="f"><label for="s-gst">Default GST % (domestic)</label><input class="inp" id="s-gst" inputmode="decimal" placeholder="0"></div>
+              <div class="f"><label for="s-intlcountry">Usual international client</label><select class="inp" id="s-intlcountry"></select></div>
+            </div>
             <label class="check"><input type="checkbox" id="s-showno"> Print the invoice number on the PDF</label>
           </div>
         </div>
@@ -492,20 +550,47 @@ table.list tr.click:hover td { background: var(--shell); }
   const $$ = (s) => [...document.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  /* ---------------- Currencies & countries ---------------- */
+  const CURRENCIES = {
+    INR: { sym: "₹", loc: "en-IN", dp: 0, name: "Indian Rupee" },
+    USD: { sym: "$", loc: "en-US", dp: 2, name: "US Dollar" },
+    GBP: { sym: "£", loc: "en-GB", dp: 2, name: "British Pound" },
+    EUR: { sym: "€", loc: "en-IE", dp: 2, name: "Euro" },
+    CAD: { sym: "C$", loc: "en-CA", dp: 2, name: "Canadian Dollar" },
+    AUD: { sym: "A$", loc: "en-AU", dp: 2, name: "Australian Dollar" },
+    SGD: { sym: "S$", loc: "en-SG", dp: 2, name: "Singapore Dollar" },
+    AED: { sym: "AED ", loc: "en-AE", dp: 2, name: "UAE Dirham" },
+    JPY: { sym: "¥", loc: "ja-JP", dp: -1, name: "Japanese Yen" },
+  };
+  const COUNTRIES = {
+    US: { name: "United States", cur: "USD", tax: "EIN" },
+    GB: { name: "United Kingdom", cur: "GBP", tax: "VAT Number" },
+    CA: { name: "Canada", cur: "CAD", tax: "Business Number" },
+    AU: { name: "Australia", cur: "AUD", tax: "ABN" },
+    IE: { name: "Ireland", cur: "EUR", tax: "VAT Number" },
+    DE: { name: "Germany", cur: "EUR", tax: "VAT Number" },
+    NL: { name: "Netherlands", cur: "EUR", tax: "VAT Number" },
+    FR: { name: "France", cur: "EUR", tax: "VAT Number" },
+    SG: { name: "Singapore", cur: "SGD", tax: "UEN" },
+    AE: { name: "United Arab Emirates", cur: "AED", tax: "TRN" },
+    JP: { name: "Japan", cur: "JPY", tax: "Tax ID" },
+    XX: { name: "Other country", cur: "USD", tax: "Tax ID" },
+  };
+  const curOf = (code) => CURRENCIES[code] || CURRENCIES.INR;
+
   /* ---------------- Dates & money ---------------- */
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const pad = (n) => String(n).padStart(2, "0");
   const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const parseISO = (s) => { const [y, m, d] = String(s).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
   const todayISO = () => toISO(new Date());
-  const longDate = (s) => { const d = parseISO(s); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+  const longDate = (s, us) => { const d = parseISO(s); return us ? `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}` : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
   const shortDate = (s) => { const d = parseISO(s); return `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`; };
   function addMonths(s, n) {
     const d = parseISO(s);
-    const target = new Date(d.getFullYear(), d.getMonth() + n, 1);
-    const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-    target.setDate(Math.min(d.getDate(), last));
-    return toISO(target);
+    const t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+    t.setDate(Math.min(d.getDate(), new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+    return toISO(t);
   }
   function dueFrom(dateISO, terms) {
     if (!terms || terms === "m1" || terms === "custom") return addMonths(dateISO, 1);
@@ -513,8 +598,13 @@ table.list tr.click:hover td { background: var(--shell); }
   }
   const num = (v) => { const n = parseFloat(String(v ?? "").replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; };
   const round2 = (n) => Math.round(n * 100) / 100;
-  const fmt = (n) => round2(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
-  const money = (n) => "₹" + fmt(n);
+  function fmt(n, code) {
+    const c = curOf(code); const v = round2(n);
+    const dp = c.dp === -1 ? 0 : c.dp === 0 ? (Number.isInteger(v) ? 0 : 2) : 2;
+    return v.toLocaleString(c.loc, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  }
+  const money = (n, code) => curOf(code).sym + fmt(n, code);
+  const moneyMix = (map) => { const parts = Object.entries(map).filter(([, v]) => v).map(([k, v]) => money(v, k)); return parts.length ? parts.join(" · ") : "₹0"; };
 
   /* ---------------- Storage: artifact db when available, else this browser ---------------- */
   const LS = {
@@ -523,9 +613,7 @@ table.list tr.click:hover td { background: var(--shell); }
   };
   const Store = {
     db: null,
-    async init() {
-      try { if (window.claude && typeof window.claude.use === "function") this.db = await window.claude.use("db"); } catch { this.db = null; }
-    },
+    async init() { try { if (window.claude && typeof window.claude.use === "function") this.db = await window.claude.use("db"); } catch { this.db = null; } },
     async profile() {
       if (this.db) { const s = await this.db.doc("settings/profile").get(); return s.exists ? { ...s.data() } : null; }
       return LS.get("profile", null);
@@ -551,26 +639,25 @@ table.list tr.click:hover td { background: var(--shell); }
       if (this.db) return this.db.collection("invoices").doc(inv.id).set(inv);
       LS.set("invoices", LS.get("invoices", []).filter((x) => x.id !== inv.id).concat(inv));
     },
-    async deleteInvoice(id) {
-      if (this.db) return this.db.collection("invoices").doc(id).delete();
-      LS.set("invoices", LS.get("invoices", []).filter((x) => x.id !== id));
-    },
   };
 
   /* ---------------- State ---------------- */
-  const EMPTY_PROFILE = { name: "", title: "", email: "", phone: "", address: "", bank: "", accName: "", accNo: "", ifsc: "", pan: "", photo: "", due: "m1", prefix: "INV", showNo: true, gst: 0 };
+  const EMPTY_PROFILE = {
+    name: "", title: "", email: "", phone: "", address: "", bank: "", accName: "", accNo: "", ifsc: "", pan: "", photo: "",
+    due: "m1", prefix: "INV", showNo: true, gst: 0, intlCountry: "US",
+    swift: "", bankAddress: "", usdBank: "", usdAccNo: "", usdAch: "", usdWire: "", gbpBank: "", gbpAccNo: "", gbpSort: "", gbpIban: "", payOther: "",
+  };
   let profile = { ...EMPTY_PROFILE };
   let customers = [];
   let history = [];
-  const state = { id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new" };
+  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new" };
+  const drafts = {};
 
   const slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "customer";
   const findCustomer = (name) => { const n = String(name).trim().toLowerCase(); return n ? customers.find((c) => c.name.trim().toLowerCase() === n) : null; };
-  function shortFrom(name) {
-    const paren = /\(([^)]+)\)/.exec(name || "");
-    return ((paren ? paren[1] : name || "").trim().split(/\s+/)[0]) || "";
-  }
+  const shortFrom = (name) => { const paren = /\(([^)]+)\)/.exec(name || ""); return ((paren ? paren[1] : name || "").trim().split(/\s+/)[0]) || ""; };
   const initials = (name) => (String(name).replace(/\(.*?\)/g, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
+  const isIntl = () => state.mode === "intl";
 
   function nextId(dateISO) {
     const base = `${(profile.prefix || "INV").trim() || "INV"}-${dateISO.replace(/-/g, "")}`;
@@ -581,7 +668,6 @@ table.list tr.click:hover td { background: var(--shell); }
   }
   const isAutoId = (v) => /^[A-Za-z]+-\d{8}(-\d+)?$/.test(v);
 
-  /* ---------------- Status ---------------- */
   function statusOf(inv) {
     if (inv.status === "paid") return { key: "paid", label: "Paid" };
     if (inv.status === "draft") return { key: "draft", label: "Draft" };
@@ -589,43 +675,108 @@ table.list tr.click:hover td { background: var(--shell); }
     return { key: "sent", label: "Sent" };
   }
 
+  /* ---------------- Select options ---------------- */
+  $("#currency").innerHTML = Object.entries(CURRENCIES).map(([k, c]) => `<option value="${k}">${k} · ${esc(c.sym.trim())}</option>`).join("");
+  const countryOpts = Object.entries(COUNTRIES).map(([k, c]) => `<option value="${k}">${esc(c.name)}</option>`).join("");
+  $("#country").innerHTML = countryOpts;
+  $("#s-intlcountry").innerHTML = countryOpts;
+
+  /* ---------------- Form snapshot ---------------- */
+  function getForm() {
+    return {
+      mode: state.mode, currency: state.currency, country: state.country, status: state.status,
+      name: $("#cust-name").value, address: $("#cust-address").value, gstin: $("#cust-gstin").value,
+      id: $("#inv-id").value, date: state.date, due: state.due, terms: state.terms,
+      items: state.items.map(({ desc, qty, rate }) => ({ desc, qty, rate })),
+      discount: $("#discount").value, gst: $("#gst-pct").value, notes: $("#notes").value, fx: $("#fx").value,
+    };
+  }
+  function freshForm(mode) {
+    const country = mode === "intl" ? (profile.intlCountry || "US") : "IN";
+    return {
+      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new",
+      name: "", address: "", gstin: "", id: nextId(todayISO()), date: todayISO(), due: "", terms: profile.due || "m1",
+      items: [{ desc: "", qty: 1, rate: "" }], discount: "", gst: mode === "intl" ? "" : (profile.gst || ""), notes: "", fx: "",
+    };
+  }
+  function setForm(f) {
+    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms });
+    if (state.status === "new" && isAutoId(f.id)) f.id = nextId(f.date);
+    $("#cust-name").value = f.name; $("#cust-address").value = f.address; $("#cust-gstin").value = f.gstin;
+    $("#inv-id").value = f.id; $("#discount").value = f.discount; $("#gst-pct").value = f.gst; $("#notes").value = f.notes; $("#fx").value = f.fx || "";
+    state.items = (f.items && f.items.length ? f.items : [{ desc: "", qty: 1, rate: "" }]).map((x) => newItem(x.desc, x.qty, x.rate));
+    renderItems(); applyMode(); syncCustomerHint(); update(); setMsg("");
+  }
+  function formFromInvoice(inv) {
+    const mode = inv.mode === "intl" ? "intl" : "dom";
+    let terms = inv.terms || "custom";
+    if (terms !== "custom" && dueFrom(inv.date, terms) !== inv.due) terms = "custom";
+    const c = inv.customer || {};
+    return {
+      mode, currency: inv.currency || "INR", country: inv.country || c.country || (mode === "intl" ? "US" : "IN"), status: inv.status || "sent",
+      name: c.name || "", address: c.address || "", gstin: c.gstin || "", id: inv.id, date: inv.date, due: inv.due, terms,
+      items: inv.items || [], discount: inv.discount || "", gst: inv.gstOn === false ? "" : (inv.gstPct || ""), notes: inv.notes || "", fx: inv.fx || "",
+    };
+  }
+
   /* ---------------- Views ---------------- */
   function go(view, opts = {}) {
+    if (view === "create") {
+      const m = opts.mode || state.mode;
+      if (opts.form) setForm(opts.form);
+      else if (m !== state.mode) { drafts[state.mode] = getForm(); setForm(drafts[m] && !opts.fresh ? drafts[m] : freshForm(m)); }
+      else if (opts.fresh) setForm(freshForm(m));
+    }
     $$("[data-view]").forEach((s) => { s.hidden = s.dataset.view !== view; });
-    $$(".tab").forEach((t) => t.toggleAttribute("aria-current", t.dataset.go === view));
-    $$(".tab[aria-current]").forEach((t) => t.setAttribute("aria-current", "page"));
+    $$(".tab").forEach((t) => {
+      const on = t.dataset.go === view && (view !== "create" || t.dataset.mode === state.mode);
+      if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current");
+    });
     if (view === "invoices") renderInvoices();
     if (view === "customers") renderCustomers();
     if (view === "details") openDetails();
-    if (view === "create") { if (opts.fresh) newInvoice(); requestAnimationFrame(fit); }
+    if (view === "create") requestAnimationFrame(fit);
     window.scrollTo({ top: 0 });
   }
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-go]");
-    if (t) { e.preventDefault(); go(t.dataset.go, { fresh: t.dataset.fresh === "1" }); }
+    if (t) { e.preventDefault(); go(t.dataset.go, { fresh: t.dataset.fresh === "1", mode: t.dataset.mode }); }
   });
-
   function syncMe() {
-    const b = $("#me-btn");
-    b.innerHTML = profile.photo ? `<img src="${esc(profile.photo)}" alt="">` : `<span class="ini">${esc(profile.name ? initials(profile.name) : "?")}</span>`;
+    $("#me-btn").innerHTML = profile.photo ? `<img src="${esc(profile.photo)}" alt="">` : `<span class="ini">${esc(profile.name ? initials(profile.name) : "?")}</span>`;
+  }
+
+  /* ---------------- Mode-dependent labels ---------------- */
+  function taxIdLabel() { return isIntl() ? (COUNTRIES[state.country] || COUNTRIES.XX).tax : "GST Number"; }
+  function applyMode() {
+    const intl = isIntl();
+    $("#mode-note").hidden = !intl;
+    $("#country-f").hidden = !intl;
+    $("#gstin-f").style.gridColumn = intl ? "" : "1 / -1";
+    $("#fx-f").hidden = !intl || state.currency === "INR";
+    $("#country").value = COUNTRIES[state.country] ? state.country : "XX";
+    $("#currency").value = state.currency;
+    $("#gstin-lbl").textContent = intl ? `Client ${taxIdLabel()}` : "Customer GST Number";
+    $("#cust-gstin").placeholder = intl ? "Optional" : "Optional, e.g. 29ABCDE1234F1Z5";
+    $("#gst-pct").closest(".f").querySelector("label").dataset.base = intl ? "Tax" : "Tax (GST";
   }
 
   /* ---------------- Items ---------------- */
   let itemSeq = 0;
   const newItem = (desc = "", qty = 1, rate = "") => ({ key: ++itemSeq, desc, qty, rate });
   const TRASH = '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
-
   function renderItems() {
     const list = $("#items");
     list.innerHTML = "";
+    const sym = esc(curOf(state.currency).sym.trim());
     state.items.forEach((it) => {
       const row = document.createElement("div");
       row.className = "it-row";
       row.innerHTML = `
         <input class="inp c-desc" id="desc-${it.key}" list="desc-suggest" placeholder="What did you do?" aria-label="Item" value="${esc(it.desc)}">
         <input class="inp num c-qty" id="qty-${it.key}" inputmode="numeric" aria-label="Quantity" value="${esc(it.qty)}" style="text-align:center">
-        <div class="affix c-cost"><span class="pre">₹</span><input class="inp has-pre num" id="rate-${it.key}" inputmode="decimal" placeholder="0" aria-label="Cost" value="${esc(it.rate)}"></div>
-        <div class="affix c-amt"><span class="pre">₹</span><input class="inp has-pre num" id="amt-${it.key}" readonly tabindex="-1" aria-label="Amount"></div>
+        <div class="affix c-cost"><span class="pre cur">${sym}</span><input class="inp has-pre num" id="rate-${it.key}" inputmode="decimal" placeholder="0" aria-label="Cost" value="${esc(it.rate)}"></div>
+        <div class="affix c-amt"><span class="pre cur">${sym}</span><input class="inp has-pre num" id="amt-${it.key}" readonly tabindex="-1" aria-label="Amount"></div>
         <button type="button" class="trash" aria-label="Remove item"${state.items.length < 2 ? " disabled" : ""}>${TRASH}</button>`;
       row.querySelector(`#desc-${it.key}`).addEventListener("input", (e) => { it.desc = e.target.value; update(); });
       row.querySelector(`#qty-${it.key}`).addEventListener("input", (e) => { it.qty = e.target.value; update(); });
@@ -640,29 +791,34 @@ table.list tr.click:hover td { background: var(--shell); }
     const name = $("#cust-name").value.trim();
     const saved = findCustomer(name);
     return {
-      id: saved ? saved.id : slug(name),
-      name,
+      id: saved ? saved.id : slug(name), name,
       address: $("#cust-address").value.trim(),
       gstin: $("#cust-gstin").value.trim().toUpperCase(),
       short: saved?.short || shortFrom(name),
+      intl: isIntl(), country: isIntl() ? state.country : "IN", currency: state.currency,
     };
   }
   function syncCustomerHint() {
     const name = $("#cust-name").value.trim();
     const saved = findCustomer(name);
     const h = $("#cust-hint");
-    if (!name) h.textContent = customers.length ? "Pick a saved customer and their address fills in." : "A new customer's address is remembered for next time.";
+    if (!name) h.textContent = "Pick a saved customer and their address fills in. New customers are remembered.";
     else if (saved) h.innerHTML = "<b>Saved customer.</b> Changes you make here update them when you save.";
     else h.innerHTML = "<b>New customer.</b> Add their address once; it is remembered for next time.";
   }
-  function fillCustomer(c) {
-    $("#cust-address").value = c?.address || "";
-    $("#cust-gstin").value = c?.gstin || "";
+  function pickCustomer(c) {
+    $("#cust-name").value = c.name;
+    $("#cust-address").value = c.address || "";
+    $("#cust-gstin").value = c.gstin || "";
+    if (isIntl() && c.country) state.country = c.country;
+    if (c.currency) state.currency = c.currency;
+    closeMenu(); applyMode(); renderItems(); syncCustomerHint(); update();
   }
   let menuIndex = -1;
   function openMenu(all) {
     const q = all ? "" : $("#cust-name").value.trim().toLowerCase();
-    const matches = customers.filter((c) => !q || c.name.toLowerCase().includes(q) || (c.short || "").toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+    const matches = customers.filter((c) => !!c.intl === isIntl())
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || (c.short || "").toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
     const menu = $("#cust-menu");
     if (!matches.length || (matches.length === 1 && matches[0].name.toLowerCase() === q)) return closeMenu();
     menuIndex = -1;
@@ -670,9 +826,10 @@ table.list tr.click:hover td { background: var(--shell); }
     matches.forEach((c) => {
       const b = document.createElement("button");
       b.type = "button"; b.setAttribute("role", "option");
-      b.innerHTML = `<span class="m1">${esc(c.name)}</span><span class="m2">${esc((c.address || "").replace(/\n/g, ", "))}</span>`;
+      const where = c.intl ? `${(COUNTRIES[c.country] || COUNTRIES.XX).name} · ${c.currency || "USD"}` : (c.address || "").replace(/\n/g, ", ");
+      b.innerHTML = `<span class="m1">${esc(c.name)}</span><span class="m2">${esc(where)}</span>`;
       b.addEventListener("mousedown", (e) => e.preventDefault());
-      b.addEventListener("click", () => { $("#cust-name").value = c.name; fillCustomer(c); closeMenu(); syncCustomerHint(); update(); });
+      b.addEventListener("click", () => pickCustomer(c));
       menu.appendChild(b);
     });
     menu.hidden = false;
@@ -691,12 +848,44 @@ table.list tr.click:hover td { background: var(--shell); }
   }
   const ph = (v, fallback) => v ? esc(v) : `<span class="p-placeholder">${esc(fallback)}</span>`;
 
+  function payLines(p, d) {
+    const out = [];
+    const add = (k, v, fb) => { if (v || fb) out.push(`<div>${k}: ${ph(v, fb || "")}</div>`); };
+    if (d.mode !== "intl") {
+      add("Bank Name", p.bank, "Bank"); add("Account Name", p.accName || p.name, "Account name");
+      add("Account Number", p.accNo, "Account number"); add("IFSC Code", p.ifsc, "IFSC");
+    } else if (d.cur === "USD" && p.usdAccNo) {
+      add("Account Holder", p.accName || p.name); add("Bank Name", p.usdBank); add("Account Number", p.usdAccNo);
+      add("ACH Routing Number", p.usdAch); add("Wire Routing Number", p.usdWire);
+    } else if (d.cur === "GBP" && (p.gbpAccNo || p.gbpIban)) {
+      add("Account Holder", p.accName || p.name); add("Bank Name", p.gbpBank); add("Account Number", p.gbpAccNo);
+      add("Sort Code", p.gbpSort); add("IBAN", p.gbpIban);
+    } else {
+      add("Beneficiary Name", p.accName || p.name, "Account name"); add("Bank Name", p.bank, "Bank");
+      add("Account Number", p.accNo, "Account number"); add("SWIFT / BIC", p.swift, "SWIFT code");
+      add("IFSC Code", p.ifsc); add("Bank Address", p.bankAddress);
+    }
+    if (d.mode === "intl" && p.payOther) out.push(`<div class="addr" style="white-space:pre-line">${esc(p.payOther)}</div>`);
+    if (p.pan) add("PAN", p.pan);
+    return out.join("");
+  }
+
   function paperHTML(d) {
-    const { p, c, id, date, due, calc, notes } = d;
+    const { p, c, id, date, due, calc, notes, cur, mode } = d;
+    const intl = mode === "intl";
+    const m = (n) => money(n, cur);
     const filled = calc.lines.filter((l) => l.desc || l.rate);
     const rows = (filled.length ? filled : [{ desc: "", qty: 1, rate: 0, amount: 0 }]).map((l) => `
-      <tr class="it"><td>${ph(l.desc, "Item description")}</td><td>${l.rate ? money(l.rate) : ""}</td><td>${esc(l.qty)}</td><td class="amt">${money(l.amount)}</td></tr>`).join("");
+      <tr class="it"><td>${ph(l.desc, "Item description")}</td><td>${l.rate ? m(l.rate) : ""}</td><td>${esc(l.qty)}</td><td class="amt">${m(l.amount)}</td></tr>`).join("");
     const photo = p.photo ? `<img class="p-photo" src="${esc(p.photo)}" alt="">` : "";
+    const countryName = intl ? (COUNTRIES[d.country] || COUNTRIES.XX).name : "";
+    const addr = c.address && countryName && d.country !== "XX" && !c.address.toLowerCase().includes(countryName.toLowerCase()) ? `${c.address}\n${countryName}` : c.address;
+    const taxRows = intl
+      ? (calc.pct ? `<tr class="sum"><td colspan="3" class="lbl">Tax (%)</td><td class="amt">${esc(calc.pct)}</td></tr>
+          <tr class="sum before-total"><td colspan="3" class="lbl">Tax Amount</td><td class="amt">${m(calc.gst)}</td></tr>` : "")
+      : `<tr class="sum"><td colspan="3" class="lbl">GST (%)</td><td class="amt">${esc(calc.pct)}</td></tr>
+          <tr class="sum before-total"><td colspan="3" class="lbl">GST Amount</td><td class="amt">${m(calc.gst)}</td></tr>`;
+    const discountRow = calc.discount > 0 ? `<tr class="sum${!taxRows ? " before-total" : ""}"><td colspan="3" class="lbl">Discount</td><td class="amt">−${m(calc.discount)}</td></tr>` : "";
     return `
       <div class="p-top">
         <div><h1 class="p-title">Invoice</h1><div class="p-rules"><i></i><i></i></div></div>
@@ -708,58 +897,58 @@ table.list tr.click:hover td { background: var(--shell); }
       <div class="p-billed">
         <b>Billed To:</b>
         <div style="margin-top:6px">${ph(c.name, "Customer name")}</div>
-        <b>Address</b><div class="addr">${ph(c.address, "Customer address")}</div>
+        <b>Address</b><div class="addr">${ph(addr, "Customer address")}</div>
       </div>
-      ${c.gstin ? `<div class="p-gst"><b>GST Number</b> - ${esc(c.gstin)}</div>` : ""}
+      ${c.gstin ? `<div class="p-gst"><b>${esc(taxIdLabelFor(mode, d.country))}</b> - ${esc(c.gstin)}</div>` : ""}
       <div class="p-hr"></div>
-      <div class="p-date"><span>Invoice Date: ${esc(longDate(date))}</span>${p.showNo !== false && id ? `<span class="no">Invoice No: ${esc(id)}</span>` : ""}</div>
+      <div class="p-date"><span>Invoice Date: ${esc(longDate(date, intl && d.country === "US"))}</span>${p.showNo !== false && id ? `<span class="no">Invoice No: ${esc(id)}</span>` : ""}</div>
       <table class="p-table">
         <colgroup><col class="col-desc"><col class="col-rate"><col class="col-qty"><col></colgroup>
-        <thead><tr><th>Description</th><th>Rate</th><th>Qty</th><th>Amount</th></tr></thead>
+        <thead><tr><th>Description</th><th>Rate</th><th>Qty</th><th>Amount${cur !== "INR" ? ` (${esc(cur)})` : ""}</th></tr></thead>
         <tbody>
           ${rows}
-          ${calc.discount > 0 ? `<tr class="sum"><td colspan="3" class="lbl">Discount</td><td class="amt">−${money(calc.discount)}</td></tr>` : ""}
-          <tr class="sum"><td colspan="3" class="lbl">GST (%)</td><td class="amt">${esc(calc.pct)}</td></tr>
-          <tr class="sum before-total"><td colspan="3" class="lbl">GST Amount</td><td class="amt">${money(calc.gst)}</td></tr>
-          <tr class="sum total"><td colspan="3" class="lbl">Total</td><td class="amt">${money(calc.total)}</td></tr>
+          ${discountRow}
+          ${taxRows}
+          <tr class="sum total"><td colspan="3" class="lbl">Total${cur !== "INR" ? ` (${esc(cur)})` : ""}</td><td class="amt">${m(calc.total)}</td></tr>
         </tbody>
       </table>
       <div class="p-pay">
         <b>Payment Information</b>
         <div style="margin-top:6px">Payment Due Date: ${esc(shortDate(due))}</div>
-        <div>Bank Name: ${ph(p.bank, "Bank")}</div>
-        <div>Account Name: ${ph(p.accName || p.name, "Account name")}</div>
-        <div>Account Number: ${ph(p.accNo, "Account number")}</div>
-        <div>IFSC Code: ${ph(p.ifsc, "IFSC")}</div>
-        ${p.pan ? `<div>PAN: ${esc(p.pan)}</div>` : ""}
+        ${payLines(p, d)}
       </div>
       ${notes ? `<div class="p-notes">${esc(notes)}</div>` : ""}
       ${p.email ? `<div class="p-foot">If you have any questions regarding this invoice, please reach out to ${esc(p.email)}</div>` : ""}`;
   }
+  const taxIdLabelFor = (mode, country) => mode === "intl" ? (COUNTRIES[country] || COUNTRIES.XX).tax : "GST Number";
 
   function fileName(c, calc) {
     const who = (c.short || shortFrom(c.name) || "Client").trim();
     const what = (calc.lines.find((l) => l.desc)?.desc || "").trim();
     return ["Invoice", [who, what].filter(Boolean).join(" "), (profile.name || "").trim()].filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]+/g, "").slice(0, 200) + ".pdf";
   }
-  const currentData = () => ({ p: profile, c: customerDraft(), id: $("#inv-id").value.trim(), date: state.date, due: state.due, calc: computed(), notes: $("#notes").value.trim() });
+  const currentData = () => ({ p: profile, c: customerDraft(), id: $("#inv-id").value.trim(), date: state.date, due: state.due, calc: computed(), notes: $("#notes").value.trim(), cur: state.currency, mode: state.mode, country: state.country, fx: num($("#fx").value) });
 
   function update() {
     if (state.terms !== "custom") state.due = dueFrom(state.date, state.terms);
-    $("#inv-date").value = state.date;
-    $("#inv-due").value = state.due;
-    $("#terms").value = state.terms;
+    $("#inv-date").value = state.date; $("#inv-due").value = state.due; $("#terms").value = state.terms;
     $("#terms").querySelector('[value="custom"]').hidden = state.terms !== "custom";
     const d = currentData();
-    state.items.forEach((it, i) => { const el = document.getElementById(`amt-${it.key}`); if (el) el.value = fmt(d.calc.lines[i].amount); });
-    $("#total").value = fmt(d.calc.total);
-    $("#gst-lbl").textContent = d.calc.pct ? `Tax (GST ${d.calc.pct}%)` : "Tax (GST %)";
+    const sym = curOf(d.cur).sym.trim();
+    $$(".cur").forEach((el) => { el.textContent = sym; });
+    state.items.forEach((it, i) => { const el = document.getElementById(`amt-${it.key}`); if (el) el.value = fmt(d.calc.lines[i].amount, d.cur); });
+    $("#total").value = fmt(d.calc.total, d.cur);
+    const taxWord = isIntl() ? "Tax" : "Tax (GST";
+    $("#gst-lbl").textContent = isIntl() ? (d.calc.pct ? `Tax (${d.calc.pct}%)` : "Tax %") : (d.calc.pct ? `${taxWord} ${d.calc.pct}%)` : "Tax (GST %)");
     const th = $("#tax-hint");
     th.hidden = !(d.calc.discount || d.calc.gst);
-    th.textContent = `Subtotal ${money(d.calc.subtotal)}${d.calc.discount ? ` − discount ${money(d.calc.discount)}` : ""}${d.calc.gst ? ` + GST ${money(d.calc.gst)}` : ""} = ${money(d.calc.total)}`;
+    th.textContent = `Subtotal ${money(d.calc.subtotal, d.cur)}${d.calc.discount ? ` − discount ${money(d.calc.discount, d.cur)}` : ""}${d.calc.gst ? ` + tax ${money(d.calc.gst, d.cur)}` : ""} = ${money(d.calc.total, d.cur)}`;
+    $("#fx-f").hidden = !isIntl() || d.cur === "INR";
+    $("#fx-lbl").textContent = `Exchange rate (₹ per 1 ${d.cur})`;
+    $("#fx-hint").textContent = d.fx && d.calc.total ? `About ${money(d.calc.total * d.fx, "INR")}. Not printed on the invoice.` : "Not printed on the invoice. Shows the rupee value in your invoice list.";
     $("#paper").innerHTML = paperHTML(d);
     $("#file-name").textContent = fileName(d.c, d.calc);
-    $("#create-title").textContent = state.status === "new" ? "Create New Invoice" : `Invoice ${d.id}`;
+    $("#create-title").textContent = state.status === "new" ? (isIntl() ? "Create International Invoice" : "Create New Invoice") : `Invoice ${d.id}`;
   }
 
   function fit() {
@@ -768,8 +957,7 @@ table.list tr.click:hover td { background: var(--shell); }
     const w = desk.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     if (w <= 0) return;
     const scale = Math.min(1, w / 794);
-    frame.style.width = 794 * scale + "px";
-    frame.style.height = 1123 * scale + "px";
+    frame.style.width = 794 * scale + "px"; frame.style.height = 1123 * scale + "px";
     $("#paper").style.transform = `scale(${scale})`;
   }
   new ResizeObserver(fit).observe($(".desk"));
@@ -792,7 +980,8 @@ table.list tr.click:hover td { background: var(--shell); }
     const customer = { ...d.c, id: d.c.id || slug(d.c.name), short: d.c.short || shortFrom(d.c.name) };
     const prev = history.find((h) => h.id === d.id);
     const inv = {
-      id: d.id, date: state.date, due: state.due, terms: state.terms,
+      id: d.id, mode: d.mode, currency: d.cur, country: d.country, fx: d.fx || 0,
+      date: state.date, due: state.due, terms: state.terms,
       items: d.calc.lines.filter((l) => l.desc || l.rate).map(({ desc, qty, rate }) => ({ desc, qty, rate })),
       discount: d.calc.discount, gstPct: d.calc.pct, total: d.calc.total, notes: d.notes,
       customer, status: prev?.status === "paid" ? "paid" : status, createdAt: prev?.createdAt || new Date().toISOString(),
@@ -805,7 +994,6 @@ table.list tr.click:hover td { background: var(--shell); }
     if (results.some((r) => r.status === "rejected")) throw new Error("Could not save the invoice. Check your connection and try again.");
     return { inv, customer };
   }
-
   async function buildPdf(d) {
     if (!window.html2canvas || !window.jspdf) throw new Error("The PDF tools did not load. Check your connection and reload the page.");
     try { await document.fonts.ready; } catch {}
@@ -820,7 +1008,6 @@ table.list tr.click:hover td { background: var(--shell); }
     pdf.setProperties({ title: fileName(d.c, d.calc).replace(/\.pdf$/, ""), author: d.p.name || "", subject: d.id, creator: "Invoice Maker" });
     return pdf;
   }
-
   async function saveDraft() {
     const d = currentData();
     if (!validate(d)) return;
@@ -829,7 +1016,6 @@ table.list tr.click:hover td { background: var(--shell); }
     catch (err) { setMsg(err.message, "err"); }
     finally { b.disabled = false; }
   }
-
   async function download() {
     const d = currentData();
     if (!validate(d)) return;
@@ -852,30 +1038,6 @@ table.list tr.click:hover td { background: var(--shell); }
       console.error(err); setMsg(err?.message || "Something went wrong making the PDF. Try again.", "err");
     } finally { btn.disabled = false; }
   }
-
-  function newInvoice() {
-    $("#cust-name").value = ""; fillCustomer(null);
-    $("#discount").value = ""; $("#gst-pct").value = profile.gst ? profile.gst : ""; $("#notes").value = "";
-    state.date = todayISO(); state.terms = profile.due || "m1"; state.status = "new";
-    state.items = [newItem()];
-    $("#inv-id").value = nextId(state.date);
-    renderItems(); syncCustomerHint(); update(); setMsg("");
-  }
-
-  function loadInvoice(inv) {
-    $("#inv-id").value = inv.id;
-    state.date = inv.date; state.due = inv.due; state.terms = inv.terms || "custom"; state.status = inv.status || "sent";
-    if (state.terms !== "custom" && dueFrom(inv.date, state.terms) !== inv.due) state.terms = "custom";
-    state.items = (inv.items || []).map((x) => newItem(x.desc, x.qty, x.rate));
-    if (!state.items.length) state.items = [newItem()];
-    const c = inv.customer || {};
-    $("#cust-name").value = c.name || ""; fillCustomer(c);
-    $("#discount").value = inv.discount || ""; $("#gst-pct").value = inv.gstOn === false ? "" : (inv.gstPct || "");
-    $("#notes").value = inv.notes || "";
-    renderItems(); syncCustomerHint(); update();
-    go("create");
-  }
-
   function refreshSuggestions() {
     const seen = new Set();
     $("#desc-suggest").innerHTML = history.flatMap((h) => (h.items || []).map((x) => x.desc)).filter((d) => d && !seen.has(d) && seen.add(d))
@@ -884,38 +1046,41 @@ table.list tr.click:hover td { background: var(--shell); }
 
   /* ---------------- Invoices view ---------------- */
   function renderInvoices() {
-    const sum = (arr) => arr.reduce((s, x) => s + (x.total || 0), 0);
+    const by = (arr) => arr.reduce((m, x) => { const k = x.currency || "INR"; m[k] = round2((m[k] || 0) + (x.total || 0)); return m; }, {});
     const st = history.map((h) => ({ h, s: statusOf(h).key }));
-    const open = st.filter((x) => x.s === "sent" || x.s === "overdue").map((x) => x.h);
-    const overdue = st.filter((x) => x.s === "overdue").map((x) => x.h);
-    const paid = st.filter((x) => x.s === "paid").map((x) => x.h);
+    const pick = (...keys) => st.filter((x) => keys.includes(x.s)).map((x) => x.h);
+    const open = pick("sent", "overdue"), overdue = pick("overdue"), paid = pick("paid");
     $("#stats").innerHTML = `
-      <div class="stat"><span>Waiting for payment · ${open.length}</span><b>${money(sum(open))}</b></div>
-      <div class="stat"><span>Overdue · ${overdue.length}</span><b>${money(sum(overdue))}</b></div>
-      <div class="stat"><span>Paid · ${paid.length}</span><b>${money(sum(paid))}</b></div>`;
+      <div class="stat"><span>Waiting for payment · ${open.length}</span><b>${esc(moneyMix(by(open)))}</b></div>
+      <div class="stat"><span>Overdue · ${overdue.length}</span><b>${esc(moneyMix(by(overdue)))}</b></div>
+      <div class="stat"><span>Paid · ${paid.length}</span><b>${esc(moneyMix(by(paid)))}</b></div>`;
     const box = $("#inv-table");
-    if (!history.length) { box.innerHTML = '<p class="empty">No invoices yet. Click New Invoice to make your first one.</p>'; return; }
-    box.innerHTML = `<table class="list"><thead><tr><th>Invoice No.</th><th>Customer</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>`;
+    if (!history.length) { box.innerHTML = '<p class="empty">No invoices yet. Pick Domestic or International above to make your first one.</p>'; return; }
+    box.innerHTML = `<table class="list"><thead><tr><th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>`;
     const tb = box.querySelector("tbody");
     history.forEach((inv) => {
       const s = statusOf(inv);
+      const cur = inv.currency || "INR";
+      const type = inv.mode === "intl" ? `International · ${esc((COUNTRIES[inv.country] || COUNTRIES.XX).name)}` : "Domestic";
+      const inr = cur !== "INR" && inv.fx ? `<div class="hint">≈ ${money(inv.total * inv.fx, "INR")}</div>` : "";
       const tr = document.createElement("tr"); tr.className = "click";
-      tr.innerHTML = `<td>${esc(inv.id)}</td><td class="cust-cell">${esc(inv.customer?.name || "")}</td><td>${esc(shortDate(inv.date))}</td><td>${esc(shortDate(inv.due))}</td>
-        <td class="r">${money(inv.total || 0)}</td><td><span class="chip ${s.key}">${s.label}</span></td>
+      tr.innerHTML = `<td>${esc(inv.id)}</td><td class="cust-cell">${esc(inv.customer?.name || "")}</td><td>${type}</td><td>${esc(shortDate(inv.date))}</td><td>${esc(shortDate(inv.due))}</td>
+        <td class="r">${money(inv.total || 0, cur)}${inr}</td><td><span class="chip ${s.key}">${s.label}</span></td>
         <td class="r"><button type="button" class="linkish" data-act="paid">${inv.status === "paid" ? "Mark unpaid" : "Mark paid"}</button></td>`;
       tr.addEventListener("click", async (e) => {
         if (e.target.closest('[data-act="paid"]')) {
           e.stopPropagation();
           const upd = { ...inv, status: inv.status === "paid" ? "sent" : "paid" };
-          try { await Store.saveInvoice(upd); history = history.map((h) => h.id === upd.id ? upd : h); renderInvoices(); } catch { alertRow(tr); }
+          try { await Store.saveInvoice(upd); history = history.map((h) => h.id === upd.id ? upd : h); renderInvoices(); }
+          catch { tr.querySelector('[data-act="paid"]').textContent = "Could not save, try again"; }
           return;
         }
-        loadInvoice(inv);
+        drafts[state.mode] = getForm();
+        go("create", { form: formFromInvoice(inv) });
       });
       tb.appendChild(tr);
     });
   }
-  const alertRow = (tr) => { tr.querySelector('[data-act="paid"]').textContent = "Could not save, try again"; };
 
   /* ---------------- Customers view ---------------- */
   function renderCustomers() {
@@ -926,13 +1091,17 @@ table.list tr.click:hover td { background: var(--shell); }
       const count = history.filter((h) => h.customer?.id === c.id).length;
       const card = document.createElement("form");
       card.className = "panel cust-card";
+      const countrySel = c.intl ? `<div class="row c-half">
+            <div class="f"><label>Country</label><select class="inp" name="country">${countryOpts}</select></div>
+            <div class="f"><label>Currency</label><select class="inp" name="currency">${$("#currency").innerHTML}</select></div></div>` : "";
       card.innerHTML = `
-        <div class="panel-h"><h2>${esc(c.name)}</h2><span class="note">${count} invoice${count === 1 ? "" : "s"}</span></div>
+        <div class="panel-h"><h2>${esc(c.name)}<span class="badge">${c.intl ? `International · ${esc(c.currency || "USD")}` : "Domestic"}</span></h2><span class="note">${count} invoice${count === 1 ? "" : "s"}</span></div>
         <div class="panel-b">
           <div class="f"><label>Name</label><input class="inp" name="name" value="${esc(c.name)}"></div>
           <div class="f"><label>Billing address</label><textarea class="inp" name="address" rows="3">${esc(c.address)}</textarea></div>
-          <div class="row c2" style="grid-template-columns:1fr 1fr">
-            <div class="f"><label>GST number</label><input class="inp" name="gstin" value="${esc(c.gstin)}"></div>
+          ${countrySel}
+          <div class="row c-half">
+            <div class="f"><label>${c.intl ? "Tax ID (VAT / EIN)" : "GST number"}</label><input class="inp" name="gstin" value="${esc(c.gstin)}"></div>
             <div class="f"><label>Short name (for file names)</label><input class="inp" name="short" value="${esc(c.short)}"></div>
           </div>
           <div class="card-actions">
@@ -944,16 +1113,19 @@ table.list tr.click:hover td { background: var(--shell); }
           </div>
           <p class="hint" data-msg></p>
         </div>`;
+      if (c.intl) { card.elements.country.value = COUNTRIES[c.country] ? c.country : "XX"; card.elements.currency.value = c.currency || "USD"; }
       const msg = card.querySelector("[data-msg]");
       card.addEventListener("submit", async (e) => {
         e.preventDefault();
         const f = new FormData(card);
         const upd = { ...c, name: String(f.get("name")).trim() || c.name, address: String(f.get("address")).trim(), gstin: String(f.get("gstin")).trim().toUpperCase(), short: String(f.get("short")).trim() };
-        try { await Store.saveCustomer(upd); customers = customers.map((x) => x.id === c.id ? upd : x); msg.textContent = "Saved."; card.querySelector("h2").textContent = upd.name; }
+        if (c.intl) { upd.country = String(f.get("country")); upd.currency = String(f.get("currency")); }
+        try { await Store.saveCustomer(upd); customers = customers.map((x) => x.id === c.id ? upd : x); msg.textContent = "Saved."; renderCustomers(); }
         catch { msg.textContent = "Could not save. Try again."; }
       });
       card.querySelector('[data-act="new"]').addEventListener("click", () => {
-        go("create", { fresh: true }); $("#cust-name").value = c.name; fillCustomer(c); syncCustomerHint(); update();
+        go("create", { mode: c.intl ? "intl" : "dom", fresh: true });
+        pickCustomer(c);
         document.getElementById(`desc-${state.items[0].key}`)?.focus();
       });
       const conf = card.querySelector(".confirm"), del = card.querySelector('[data-act="del"]');
@@ -968,15 +1140,22 @@ table.list tr.click:hover td { background: var(--shell); }
   }
 
   /* ---------------- Details view ---------------- */
+  const FIELDS = {
+    "#s-name": "name", "#s-title": "title", "#s-email": "email", "#s-phone": "phone", "#s-address": "address",
+    "#s-bank": "bank", "#s-accname": "accName", "#s-accno": "accNo", "#s-ifsc": "ifsc", "#s-pan": "pan",
+    "#s-due": "due", "#s-prefix": "prefix", "#s-gst": "gst", "#s-intlcountry": "intlCountry",
+    "#s-swift": "swift", "#s-bankaddr": "bankAddress", "#s-usdbank": "usdBank", "#s-usdacc": "usdAccNo", "#s-usdach": "usdAch", "#s-usdwire": "usdWire",
+    "#s-gbpbank": "gbpBank", "#s-gbpacc": "gbpAccNo", "#s-gbpsort": "gbpSort", "#s-gbpiban": "gbpIban", "#s-payother": "payOther",
+  };
+  const UPPER = new Set(["ifsc", "pan", "swift", "gbpIban"]);
   let draftPhoto = "";
   const showPhoto = (src) => { $("#s-photo-img").hidden = !src; $("#s-photo-ph").hidden = !!src; if (src) $("#s-photo-img").src = src; };
   function openDetails() {
-    const f = (id, v) => { $(id).value = v ?? ""; };
-    f("#s-name", profile.name); f("#s-title", profile.title); f("#s-email", profile.email); f("#s-phone", profile.phone);
-    f("#s-address", profile.address); f("#s-bank", profile.bank); f("#s-accname", profile.accName); f("#s-accno", profile.accNo);
-    f("#s-ifsc", profile.ifsc); f("#s-pan", profile.pan); f("#s-due", profile.due || "m1"); f("#s-prefix", profile.prefix || "INV");
-    f("#s-gst", profile.gst || ""); $("#s-showno").checked = profile.showNo !== false;
-    draftPhoto = profile.photo || ""; showPhoto(draftPhoto); setMsg("", "", "#s-msg");
+    for (const [sel, key] of Object.entries(FIELDS)) $(sel).value = profile[key] ?? "";
+    if (!profile.gst) $("#s-gst").value = "";
+    $("#s-due").value = profile.due || "m1"; $("#s-prefix").value = profile.prefix || "INV"; $("#s-intlcountry").value = profile.intlCountry || "US";
+    $("#s-showno").checked = profile.showNo !== false;
+    draftPhoto = profile.photo || ""; showPhoto(draftPhoto);
   }
   $("#s-photo").addEventListener("change", (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -992,13 +1171,11 @@ table.list tr.click:hover td { background: var(--shell); }
   $("#s-photo-rm").addEventListener("click", () => { draftPhoto = ""; showPhoto(""); });
   $("#settings").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const g = (id) => $(id).value.trim();
     const wasAuto = isAutoId($("#inv-id").value);
-    profile = {
-      ...profile, name: g("#s-name"), title: g("#s-title"), email: g("#s-email"), phone: g("#s-phone"), address: $("#s-address").value.trim(),
-      bank: g("#s-bank"), accName: g("#s-accname"), accNo: g("#s-accno"), ifsc: g("#s-ifsc").toUpperCase(), pan: g("#s-pan").toUpperCase(),
-      due: $("#s-due").value, prefix: g("#s-prefix") || "INV", gst: num(g("#s-gst")), showNo: $("#s-showno").checked, photo: draftPhoto,
-    };
+    const next = { ...profile };
+    for (const [sel, key] of Object.entries(FIELDS)) { let v = $(sel).value.trim(); if (UPPER.has(key)) v = v.toUpperCase(); next[key] = v; }
+    next.gst = num(next.gst); next.prefix = next.prefix || "INV"; next.showNo = $("#s-showno").checked; next.photo = draftPhoto;
+    profile = next;
     try { await Store.saveProfile(profile); setMsg("Your details are saved.", "ok", "#s-msg"); }
     catch { setMsg("Could not save your details. Try again.", "err", "#s-msg"); }
     if (wasAuto && state.status === "new") { $("#inv-id").value = nextId(state.date); state.terms = profile.due; }
@@ -1009,7 +1186,7 @@ table.list tr.click:hover td { background: var(--shell); }
   const nameEl = $("#cust-name");
   nameEl.addEventListener("input", () => {
     const saved = findCustomer(nameEl.value);
-    if (saved) fillCustomer(saved);
+    if (saved) { pickCustomer(saved); return; }
     syncCustomerHint(); openMenu(false); update();
   });
   nameEl.addEventListener("focus", () => { if (customers.length) openMenu(!nameEl.value.trim()); });
@@ -1023,7 +1200,9 @@ table.list tr.click:hover td { background: var(--shell); }
     } else if (e.key === "Enter" && menuIndex >= 0) { e.preventDefault(); opts[menuIndex].click(); }
     else if (e.key === "Escape") closeMenu();
   });
-  ["#cust-address", "#cust-gstin", "#discount", "#gst-pct", "#notes", "#inv-id"].forEach((id) => $(id).addEventListener("input", update));
+  ["#cust-address", "#cust-gstin", "#discount", "#gst-pct", "#notes", "#inv-id", "#fx"].forEach((id) => $(id).addEventListener("input", update));
+  $("#currency").addEventListener("change", (e) => { state.currency = e.target.value; renderItems(); applyMode(); update(); });
+  $("#country").addEventListener("change", (e) => { state.country = e.target.value; state.currency = (COUNTRIES[state.country] || COUNTRIES.XX).cur; renderItems(); applyMode(); update(); });
   $("#gen-id").addEventListener("click", () => { $("#inv-id").value = nextId(state.date); update(); });
   $("#inv-date").addEventListener("change", (e) => {
     if (!e.target.value) return;
@@ -1039,16 +1218,13 @@ table.list tr.click:hover td { background: var(--shell); }
   $("#form").addEventListener("submit", (e) => { e.preventDefault(); download(); });
   $("#download").addEventListener("click", download);
   $("#save-draft").addEventListener("click", saveDraft);
-  $("#new-inv").addEventListener("click", newInvoice);
+  $("#new-inv").addEventListener("click", () => setForm(freshForm(state.mode)));
 
   // Printing only works when the page is opened directly in a browser, not inside an embedded viewer.
   if (!window.claude) { $("#print").hidden = false; $("#print").addEventListener("click", () => window.print()); }
 
   /* ---------------- Boot ---------------- */
-  state.items = [newItem()];
-  $("#inv-id").value = nextId(state.date);
-  renderItems(); syncCustomerHint(); syncMe(); update(); fit();
-
+  setForm(freshForm("dom")); syncMe(); fit();
   (async () => {
     await Store.init();
     try {
@@ -1056,12 +1232,8 @@ table.list tr.click:hover td { background: var(--shell); }
       profile = { ...EMPTY_PROFILE, ...(p || {}) };
       customers = cs || []; history = hs || [];
     } catch (err) { console.warn("Could not load saved data", err); }
-    if (state.status === "new") {
-      if (isAutoId($("#inv-id").value)) $("#inv-id").value = nextId(state.date);
-      state.terms = profile.due || "m1";
-      if (profile.gst && !$("#gst-pct").value) $("#gst-pct").value = profile.gst;
-    }
-    syncMe(); syncCustomerHint(); refreshSuggestions(); update();
+    if (state.status === "new" && !$("#cust-name").value.trim()) setForm(freshForm(state.mode));
+    syncMe(); refreshSuggestions(); update();
     if (!profile.name) { go("details"); setMsg("Add your details once. They go on every invoice.", "", "#s-msg"); }
   })();
 })();

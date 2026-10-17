@@ -10,10 +10,24 @@ A single-page invoice generator. You type the **customer name** and the
 - **Customer address and GST number**: remembered after the first invoice for that customer
 - **Item names**: suggested from past invoices
 
-Pages: **Create** (form + live preview, Save as Draft, Download PDF),
+Pages: **Domestic** and **International** (form + live preview, Save as
+Draft, Download PDF),
 **Invoices** (every invoice with Draft / Sent / Overdue / Paid status and
 totals), **Customers** (edit or delete saved customers) and **Your details**.
 Discount, GST % and notes to the customer are optional.
+
+**Currencies:** every invoice has a currency switch (INR, USD, GBP, EUR, CAD,
+AUD, SGD, AED, JPY).
+
+**International invoices** (UK, US and other countries):
+- pick the client's country, and the currency follows (US → USD, UK → GBP…)
+- the client's VAT number / EIN / tax ID replaces the GST number
+- no GST rows; add a tax % only if you need one
+- the payment block shows your USD account (ACH / wire routing) on USD
+  invoices or your GBP account (sort code / IBAN) on GBP invoices if you
+  added them under *Your details*, otherwise your Indian bank with its
+  SWIFT code and branch address, plus any other way to pay (e.g. PayPal)
+- an optional exchange rate shows the rupee value in your invoice list
 
 The PDF follows the layout of the original Canva invoice: big "Invoice"
 heading, billed-to block, Description / Rate / Qty / Amount table with GST
