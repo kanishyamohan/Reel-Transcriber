@@ -16,6 +16,16 @@ Draft, Download PDF),
 totals), **Customers** (edit or delete saved customers) and **Your details**.
 Discount, GST % and notes to the customer are optional.
 
+**Paste a client's message:** open *Paste client's message* at the top of
+the form, paste their email or WhatsApp reply, and click *Fill in details*.
+It fills the customer name, billing address, country, VAT / EIN / GST number,
+currency, payment terms and PO number (into the notes), plus any priced items
+if the form is still empty, and switches between Domestic and International
+to match the country. Inside claude.ai it asks Claude to read the message;
+elsewhere it uses a built-in reader that handles labelled details
+("Company name:", "Address:", "VAT number:") and common formats. Always check
+the filled fields before sending.
+
 **Currencies:** every invoice has a currency switch (INR, USD, GBP, EUR, CAD,
 AUD, SGD, AED, JPY).
 

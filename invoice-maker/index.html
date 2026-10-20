@@ -146,6 +146,19 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .sub-h { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 4px 0 -4px; }
 .mode-note { display: flex; gap: 10px; align-items: flex-start; background: var(--shell); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); }
 .mode-note b { color: var(--fg); font-weight: 600; }
+.paste { border: 1px dashed var(--line-strong); border-radius: 10px; background: var(--shell); }
+.paste-toggle { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 11px 12px; text-align: left; border-radius: 10px; }
+.paste-toggle .t { flex: 1; display: grid; gap: 1px; min-width: 0; }
+.paste-toggle b { font-size: 13px; font-weight: 600; }
+.paste-toggle small { font-size: 12px; color: var(--muted); }
+.paste-toggle .chev { transition: transform .15s; }
+.paste-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.paste-body { display: grid; gap: 10px; padding: 0 12px 12px; }
+.paste-body .inp { background: var(--field); }
+.paste-msg { margin: 0; font-size: 12.5px; }
+.paste-msg.ok { color: var(--ok); }
+.paste-msg.err { color: var(--req); }
+.inp.filled { border-color: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); transition: box-shadow .3s, border-color .3s; }
 @media (max-width: 560px) { .row.c-top { grid-template-columns: 1fr 1fr; } .row.c-top > :first-child { grid-column: 1 / -1; } .row.c-half { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .row.c3 { grid-template-columns: 1fr 1fr; } .row.c3 > :last-child { grid-column: 1 / -1; } .row.c2 { grid-template-columns: 1fr; } }
 .icon-in { position: absolute; right: 6px; bottom: 5px; border: 0; background: var(--sunken); color: var(--muted); border-radius: 7px; padding: 5px 8px; font-size: 11.5px; font-weight: 600; }
@@ -321,6 +334,23 @@ table.list tr.click:hover td { background: var(--shell); }
         <div class="panel-b">
           <div class="mode-note" id="mode-note" hidden><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
             <span><b>International invoice.</b> No GST rows, the client's country and VAT/EIN, and your international bank details (SWIFT, or your USD/GBP account if you added one).</span></div>
+          <div class="paste" id="paste-box">
+            <button type="button" class="paste-toggle" id="paste-toggle" aria-expanded="false" aria-controls="paste-body">
+              <svg class="i" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h3"/></svg>
+              <span class="t"><b>Paste client's message</b><small>Paste their reply and the customer details fill in for you</small></span>
+              <svg class="i chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="paste-body" id="paste-body" hidden>
+              <textarea class="inp" id="paste-text" rows="6" placeholder="Paste the email or WhatsApp message with their company name, address, VAT number, PO…"></textarea>
+              <div class="card-actions">
+                <button type="button" class="btn sm ink" id="paste-go">Fill in details</button>
+                <button type="button" class="linkish" id="paste-clear">Clear</button>
+                <span class="sp"></span>
+                <span class="hint" id="paste-engine"></span>
+              </div>
+              <p class="paste-msg" id="paste-msg" role="status" aria-live="polite"></p>
+            </div>
+          </div>
           <div class="row c-top">
             <div class="f" id="cust-wrap">
               <label for="cust-name">Customer<span class="req">*</span></label>
@@ -650,7 +680,7 @@ table.list tr.click:hover td { background: var(--shell); }
   let profile = { ...EMPTY_PROFILE };
   let customers = [];
   let history = [];
-  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new" };
+  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new", email: "", contact: "" };
   const drafts = {};
 
   const slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "customer";
@@ -684,7 +714,7 @@ table.list tr.click:hover td { background: var(--shell); }
   /* ---------------- Form snapshot ---------------- */
   function getForm() {
     return {
-      mode: state.mode, currency: state.currency, country: state.country, status: state.status,
+      mode: state.mode, currency: state.currency, country: state.country, status: state.status, email: state.email, contact: state.contact,
       name: $("#cust-name").value, address: $("#cust-address").value, gstin: $("#cust-gstin").value,
       id: $("#inv-id").value, date: state.date, due: state.due, terms: state.terms,
       items: state.items.map(({ desc, qty, rate }) => ({ desc, qty, rate })),
@@ -694,13 +724,13 @@ table.list tr.click:hover td { background: var(--shell); }
   function freshForm(mode) {
     const country = mode === "intl" ? (profile.intlCountry || "US") : "IN";
     return {
-      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new",
+      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new", email: "", contact: "",
       name: "", address: "", gstin: "", id: nextId(todayISO()), date: todayISO(), due: "", terms: profile.due || "m1",
       items: [{ desc: "", qty: 1, rate: "" }], discount: "", gst: mode === "intl" ? "" : (profile.gst || ""), notes: "", fx: "",
     };
   }
   function setForm(f) {
-    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms });
+    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms, email: f.email || "", contact: f.contact || "" });
     if (state.status === "new" && isAutoId(f.id)) f.id = nextId(f.date);
     $("#cust-name").value = f.name; $("#cust-address").value = f.address; $("#cust-gstin").value = f.gstin;
     $("#inv-id").value = f.id; $("#discount").value = f.discount; $("#gst-pct").value = f.gst; $("#notes").value = f.notes; $("#fx").value = f.fx || "";
@@ -713,7 +743,7 @@ table.list tr.click:hover td { background: var(--shell); }
     if (terms !== "custom" && dueFrom(inv.date, terms) !== inv.due) terms = "custom";
     const c = inv.customer || {};
     return {
-      mode, currency: inv.currency || "INR", country: inv.country || c.country || (mode === "intl" ? "US" : "IN"), status: inv.status || "sent",
+      mode, currency: inv.currency || "INR", country: inv.country || c.country || (mode === "intl" ? "US" : "IN"), status: inv.status || "sent", email: c.email || "", contact: c.contact || "",
       name: c.name || "", address: c.address || "", gstin: c.gstin || "", id: inv.id, date: inv.date, due: inv.due, terms,
       items: inv.items || [], discount: inv.discount || "", gst: inv.gstOn === false ? "" : (inv.gstPct || ""), notes: inv.notes || "", fx: inv.fx || "",
     };
@@ -796,6 +826,7 @@ table.list tr.click:hover td { background: var(--shell); }
       gstin: $("#cust-gstin").value.trim().toUpperCase(),
       short: saved?.short || shortFrom(name),
       intl: isIntl(), country: isIntl() ? state.country : "IN", currency: state.currency,
+      email: state.email || saved?.email || "", contact: state.contact || saved?.contact || "",
     };
   }
   function syncCustomerHint() {
@@ -812,6 +843,7 @@ table.list tr.click:hover td { background: var(--shell); }
     $("#cust-gstin").value = c.gstin || "";
     if (isIntl() && c.country) state.country = c.country;
     if (c.currency) state.currency = c.currency;
+    state.email = c.email || ""; state.contact = c.contact || "";
     closeMenu(); applyMode(); renderItems(); syncCustomerHint(); update();
   }
   let menuIndex = -1;
@@ -835,6 +867,163 @@ table.list tr.click:hover td { background: var(--shell); }
     menu.hidden = false;
   }
   function closeMenu() { $("#cust-menu").hidden = true; menuIndex = -1; }
+
+  /* ---------------- Paste a client message ---------------- */
+  const TERM_DAYS = { 0: "d0", 7: "d7", 14: "d14", 15: "d15", 30: "d30", 45: "d45" };
+  let samplerP = null;
+  const getSampler = () => (samplerP ||= (window.claude && typeof window.claude.use === "function" ? window.claude.use("sample").catch(() => null) : Promise.resolve(null)));
+  let claudeOff = false;
+  async function syncEngineLabel() {
+    const s = claudeOff ? null : await getSampler();
+    $("#paste-engine").textContent = s ? "Read by Claude · check before sending" : "Quick fill · check before sending";
+  }
+
+  function extractPrompt(text) {
+    return `You read a message a client sent to a freelancer and pull out the details needed for an invoice.
+Reply with only one JSON object, exactly these keys:
+{"name": string|null, "address": string|null, "country": string|null, "taxId": string|null, "email": string|null, "contact": string|null, "po": string|null, "currency": string|null, "termsDays": number|null, "items": [{"desc": string, "qty": number, "rate": number}]}
+- name: the legal company (or person) name to bill, e.g. "Northwind Studio Ltd".
+- address: the billing address WITHOUT the country line, lines separated by \\n.
+- country: one of US, GB, CA, AU, IE, DE, NL, FR, SG, AE, JP, IN, or XX for any other country. Infer it from the address (postcode, city, state) if not written.
+- taxId: VAT number, EIN, GSTIN, ABN or other business tax number, exactly as written.
+- email: the email invoices should go to. contact: that person's name.
+- po: purchase order or reference number to quote on the invoice.
+- currency: ISO code (USD, GBP, EUR, INR...) only if the message says which currency they will pay in.
+- termsDays: days they have to pay (e.g. "30 days" or "Net 30" -> 30), only if stated.
+- items: only work explicitly priced in the message; otherwise [].
+Use only what the message says. Never invent values; use null for anything missing.
+
+Message:
+"""
+${text}
+"""`;
+  }
+
+  function quickExtract(text) {
+    const t = text.replace(/\r/g, "");
+    const lines = t.split("\n").map((l) => l.trim());
+    const out = { name: null, address: null, country: null, taxId: null, email: null, contact: null, po: null, currency: null, termsDays: null, items: [] };
+    const label = (re) => { for (let i = 0; i < lines.length; i++) { const m = re.exec(lines[i]); if (m) return { value: (m[1] || "").trim(), i }; } return null; };
+    out.email = (t.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i) || [null])[0];
+    const gstin = t.match(/\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b/i);
+    const vat = t.match(/\b(?:VAT(?:[^\S\n]*(?:reg(?:istration)?\.?)?[^\S\n]*(?:number|no\.?|#))?|EIN|ABN|UEN|TRN|Tax[^\S\n]*ID)[^\S\n]*[:#-]?[^\S\n]*((?:[A-Z]{2}[^\S\n]?)?\d(?:[\d-]|[^\S\n](?=\d)){5,18}[A-Z0-9]*)/i);
+    if (gstin) out.taxId = gstin[0].toUpperCase();
+    else if (vat) out.taxId = vat[1].replace(/\s+/g, " ").trim();
+    else { const gb = t.match(/\bGB[^\S\n]?\d{3}[^\S\n]?\d{4}[^\S\n]?\d{2}\b/); const ein = t.match(/\b\d{2}-\d{7}\b/); out.taxId = (gb || ein || [null])[0]; }
+    const po = t.match(/\b(?:P\.?O\.?|purchase\s+order|order\s+ref(?:erence)?|reference)(?:\s*(?:number|no\.?|#))?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\/-]{2,})/i);
+    if (po && !/^(number|no|box)$/i.test(po[1])) out.po = po[1];
+    const nameL = label(/^(?:company(?:\s+name)?|legal\s+name|business(?:\s+name)?|bill(?:ed)?\s+to|name)\s*[:\-]\s*(.+)$/i);
+    if (nameL) out.name = nameL.value;
+    else {
+      const SUFFIX = "(?:Private Limited|Pvt\\.? Ltd\\.?|Pty\\.? Ltd\\.?|Ltd\\.?|Limited|LLC|L\\.L\\.C\\.|Inc\\.?|LLP|GmbH|Corp\\.?|Corporation|PLC|B\\.V\\.|S\\.A\\.)";
+      const co = t.match(new RegExp("((?:[A-Z0-9&][\\w&.'’-]*[^\\S\\n]+){1,6}" + SUFFIX + ")(?:[^\\S\\n]*\\(([^)\\n]+)\\))?", ""));
+      if (co) out.name = co[2] ? `${co[1]} (${co[2]})` : co[1];
+      else { const bt = t.match(/(?:bill(?:\s+it)?\s+to|invoice\s+(?:it\s+)?to|raise\s+(?:the\s+)?invoice\s+(?:on|to|in\s+the\s+name\s+of)|in\s+the\s+name\s+of)\s*:?\s*([^\n,]{2,80})/i); if (bt) out.name = bt[1].replace(/[.\s]+$/, ""); }
+    }
+    const POST = /\b([A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}|[A-Z]{2}\s\d{5}(?:-\d{4})?|\d{5}(?:-\d{4})?|\d{6}|\d{3}\s\d{3})\b/i;
+    const addrL = label(/^(?:billing\s+)?address\s*[:\-]\s*(.*)$/i);
+    let block = [];
+    if (addrL) {
+      if (addrL.value) block.push(addrL.value);
+      for (let i = addrL.i + 1; i < lines.length && lines[i] && !/^[A-Za-z ]{2,25}\s*:/.test(lines[i]); i++) block.push(lines[i]);
+    } else {
+      const inline = out.name ? t.slice(t.indexOf(out.name) + out.name.length).match(new RegExp("^[^\\S\\n]*(?:\\([^)]*\\))?[^\\S\\n]*,[^\\S\\n]*([^\\n]*?" + POST.source + "[^.\\n]*)", "i")) : null;
+      const pi = inline ? -1 : lines.findIndex((l) => POST.test(l) && l.length < 80 && !/@|vat|ein|gst|po\b|phone|tel/i.test(l));
+      if (inline) block = [inline[1].replace(/[\s,.]+$/, "")];
+      else if (pi >= 0) { let a = pi; while (a > 0 && lines[a - 1] && !(out.name && lines[a - 1].includes(out.name)) && lines[a - 1].length < 70 && !/[?!]$|:$|^(hi|hello|dear|thanks)/i.test(lines[a - 1]) && pi - a < 3) a--; block = lines.slice(a, pi + 1); }
+    }
+    const CN = [["GB", /\b(united kingdom|uk|england|scotland|wales|great britain)\b/i], ["US", /\b(united states|usa|u\.s\.a?\.?)\b/i], ["IN", /\bindia\b/i], ["CA", /\bcanada\b/i], ["AU", /\baustralia\b/i], ["IE", /\bireland\b/i], ["DE", /\bgermany\b/i], ["NL", /\bnetherlands\b/i], ["FR", /\bfrance\b/i], ["SG", /\bsingapore\b/i], ["AE", /\b(uae|united arab emirates|dubai)\b/i], ["JP", /\bjapan\b/i]];
+    block = block.filter((l) => !CN.some(([, re]) => re.test(l) && l.replace(re, "").replace(/[\s,.]/g, "") === ""));
+    if (block.length) out.address = block.join("\n");
+    for (const [code, re] of CN) if (re.test(t)) { out.country = code; break; }
+    if (!out.country && (gstin || /\b(Karnataka|Maharashtra|Delhi|Bengaluru|Bangalore|Mumbai|Chennai|Hyderabad|Pune|Kolkata|Gurugram|Gurgaon|Noida|Tamil Nadu|Telangana|Gujarat|Kerala|Rajasthan|Uttar Pradesh|West Bengal|Haryana|Punjab)\b/i.test(t))) out.country = "IN";
+    if (!out.country && out.address) {
+      if (/\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b/.test(out.address)) out.country = "GB";
+      else if (/\b[A-Z]{2}\s\d{5}\b/.test(out.address)) out.country = "US";
+      else if (/\b\d{6}\b/.test(out.address)) out.country = "IN";
+    }
+    if (/\bUSD\b|US\s?dollars?|\$\s?\d/i.test(t)) out.currency = "USD";
+    else if (/\bGBP\b|pounds?\b|£/i.test(t)) out.currency = "GBP";
+    else if (/\bEUR\b|euros?\b|€/i.test(t)) out.currency = "EUR";
+    else if (/\bINR\b|rupees?|₹|\bRs\.?\s?\d/i.test(t)) out.currency = "INR";
+    const days = t.match(/\bnet\s?(\d{1,3})\b/i) || t.match(/\b(\d{1,3})\s*days\b/i);
+    if (days) out.termsDays = parseInt(days[1], 10);
+    else if (/\b(on|upon)\s+receipt\b/i.test(t)) out.termsDays = 0;
+    const who = t.match(/\b(?:contact|attn|attention|send (?:it|the invoice) to)\s*[:\-]?\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
+    if (who) out.contact = who[1];
+    return out;
+  }
+
+  function flash(el) { if (!el) return; el.classList.add("filled"); setTimeout(() => el.classList.remove("filled"), 2600); }
+
+  function applyExtract(x) {
+    const filled = [];
+    const country = x.country && (x.country === "IN" || COUNTRIES[x.country]) ? x.country : (x.country ? "XX" : null);
+    const target = country ? (country === "IN" ? "dom" : "intl") : state.mode;
+    if (target !== state.mode) go("create", { mode: target, fresh: true });
+    const name = (x.name || "").trim();
+    const saved = name ? findCustomer(name) : null;
+    if (saved && !!saved.intl === isIntl()) pickCustomer(saved);
+    else if (name) $("#cust-name").value = name;
+    if (name) filled.push("name");
+    if (x.address) { $("#cust-address").value = String(x.address).trim(); filled.push("address"); flash($("#cust-address")); }
+    if (x.taxId) { $("#cust-gstin").value = String(x.taxId).trim().toUpperCase(); filled.push(isIntl() ? "tax ID" : "GST number"); flash($("#cust-gstin")); }
+    if (isIntl() && country && country !== "IN") { state.country = country; state.currency = (COUNTRIES[country] || COUNTRIES.XX).cur; filled.push("country"); }
+    if (x.currency && CURRENCIES[String(x.currency).toUpperCase()]) { state.currency = String(x.currency).toUpperCase(); filled.push("currency"); }
+    if (x.email) state.email = String(x.email).trim();
+    if (x.contact) state.contact = String(x.contact).trim();
+    if (Number.isFinite(x.termsDays) && x.termsDays >= 0) {
+      const d = Math.round(x.termsDays);
+      if (TERM_DAYS[d]) state.terms = TERM_DAYS[d];
+      else { const due = parseISO(state.date); due.setDate(due.getDate() + d); state.terms = "custom"; state.due = toISO(due); }
+      filled.push("payment terms");
+    }
+    if (x.po) {
+      const line = `PO: ${String(x.po).trim()}`;
+      const notes = $("#notes").value;
+      if (!notes.includes(String(x.po).trim())) $("#notes").value = notes ? `${line}\n${notes}` : line;
+      filled.push("PO number"); flash($("#notes"));
+    }
+    const blankItems = state.items.every((it) => !it.desc.trim() && !num(it.rate));
+    const items = Array.isArray(x.items) ? x.items.filter((i) => i && (i.desc || i.rate)) : [];
+    if (blankItems && items.length) {
+      state.items = items.map((i) => newItem(String(i.desc || "").trim(), num(i.qty) || 1, num(i.rate) || ""));
+      filled.push(items.length === 1 ? "1 item" : `${items.length} items`);
+    }
+    renderItems(); applyMode(); syncCustomerHint(); update();
+    if (name) flash($("#cust-name"));
+    const missing = [];
+    if (!name) missing.push("name"); if (!x.address) missing.push("address");
+    return { filled, missing };
+  }
+
+  async function runPaste() {
+    const text = $("#paste-text").value.trim();
+    const msg = $("#paste-msg");
+    if (!text) { msg.textContent = "Paste your client's message first."; msg.className = "paste-msg err"; return; }
+    const btn = $("#paste-go"); btn.disabled = true;
+    const before = state.mode;
+    let x = null, how = "Quick fill";
+    const sampler = claudeOff ? null : await getSampler();
+    if (sampler) {
+      msg.textContent = "Reading the message…"; msg.className = "paste-msg";
+      try {
+        x = await sampler.json(extractPrompt(text.slice(0, 20000)), { modelTier: "quick" });
+        if (!x || typeof x !== "object" || Array.isArray(x)) throw { code: "invalid_json" };
+        how = "Claude";
+      } catch (e) {
+        if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e?.code)) claudeOff = true;
+        x = null;
+      }
+    }
+    if (!x) x = quickExtract(text);
+    const { filled, missing } = applyExtract(x);
+    btn.disabled = false; syncEngineLabel();
+    if (!filled.length) { msg.textContent = "Couldn't find client details in that message. Fill the fields in by hand."; msg.className = "paste-msg err"; return; }
+    const moved = state.mode !== before ? ` Switched to the ${isIntl() ? "International" : "Domestic"} tab.` : "";
+    msg.textContent = `${how} filled: ${filled.join(", ")}.${moved}${missing.length ? ` Not found: ${missing.join(", ")}.` : ""} Check them before you send.`;
+    msg.className = "paste-msg ok";
+  }
 
   /* ---------------- Calculation & paper ---------------- */
   function computed() {
@@ -1101,6 +1290,10 @@ table.list tr.click:hover td { background: var(--shell); }
           <div class="f"><label>Billing address</label><textarea class="inp" name="address" rows="3">${esc(c.address)}</textarea></div>
           ${countrySel}
           <div class="row c-half">
+            <div class="f"><label>Accounts contact</label><input class="inp" name="contact" value="${esc(c.contact)}" placeholder="Not printed"></div>
+            <div class="f"><label>Accounts email</label><input class="inp" name="email" type="email" value="${esc(c.email)}" placeholder="Where to send invoices"></div>
+          </div>
+          <div class="row c-half">
             <div class="f"><label>${c.intl ? "Tax ID (VAT / EIN)" : "GST number"}</label><input class="inp" name="gstin" value="${esc(c.gstin)}"></div>
             <div class="f"><label>Short name (for file names)</label><input class="inp" name="short" value="${esc(c.short)}"></div>
           </div>
@@ -1118,7 +1311,7 @@ table.list tr.click:hover td { background: var(--shell); }
       card.addEventListener("submit", async (e) => {
         e.preventDefault();
         const f = new FormData(card);
-        const upd = { ...c, name: String(f.get("name")).trim() || c.name, address: String(f.get("address")).trim(), gstin: String(f.get("gstin")).trim().toUpperCase(), short: String(f.get("short")).trim() };
+        const upd = { ...c, name: String(f.get("name")).trim() || c.name, address: String(f.get("address")).trim(), gstin: String(f.get("gstin")).trim().toUpperCase(), short: String(f.get("short")).trim(), contact: String(f.get("contact")).trim(), email: String(f.get("email")).trim() };
         if (c.intl) { upd.country = String(f.get("country")); upd.currency = String(f.get("currency")); }
         try { await Store.saveCustomer(upd); customers = customers.map((x) => x.id === c.id ? upd : x); msg.textContent = "Saved."; renderCustomers(); }
         catch { msg.textContent = "Could not save. Try again."; }
@@ -1219,6 +1412,13 @@ table.list tr.click:hover td { background: var(--shell); }
   $("#download").addEventListener("click", download);
   $("#save-draft").addEventListener("click", saveDraft);
   $("#new-inv").addEventListener("click", () => setForm(freshForm(state.mode)));
+  $("#paste-toggle").addEventListener("click", () => {
+    const open = $("#paste-body").hidden;
+    $("#paste-body").hidden = !open; $("#paste-toggle").setAttribute("aria-expanded", String(open));
+    if (open) { syncEngineLabel(); $("#paste-text").focus(); }
+  });
+  $("#paste-go").addEventListener("click", runPaste);
+  $("#paste-clear").addEventListener("click", () => { $("#paste-text").value = ""; $("#paste-msg").textContent = ""; $("#paste-text").focus(); });
 
   // Printing only works when the page is opened directly in a browser, not inside an embedded viewer.
   if (!window.claude) { $("#print").hidden = false; $("#print").addEventListener("click", () => window.print()); }
