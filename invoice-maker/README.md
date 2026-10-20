@@ -26,6 +26,15 @@ elsewhere it uses a built-in reader that handles labelled details
 ("Company name:", "Address:", "VAT number:") and common formats. Always check
 the filled fields before sending.
 
+**Payment accounts:** under *Your details → Payment Accounts* add as many
+accounts as you like: Indian bank (with optional SWIFT code and branch
+address for payments from abroad), USD (ACH / wire routing), GBP (sort code /
+IBAN), EUR (IBAN), UPI, or PayPal / other. Give each one a name and choose
+when it is picked automatically (domestic invoices, international invoices,
+or invoices in a given currency). On every invoice, *Payment Account* lets
+you switch to another account and *Also show* adds a second way to pay.
+Each saved invoice remembers the accounts it used.
+
 **Currencies:** every invoice has a currency switch (INR, USD, GBP, EUR, CAD,
 AUD, SGD, AED, JPY).
 
@@ -33,10 +42,7 @@ AUD, SGD, AED, JPY).
 - pick the client's country, and the currency follows (US → USD, UK → GBP…)
 - the client's VAT number / EIN / tax ID replaces the GST number
 - no GST rows; add a tax % only if you need one
-- the payment block shows your USD account (ACH / wire routing) on USD
-  invoices or your GBP account (sort code / IBAN) on GBP invoices if you
-  added them under *Your details*, otherwise your Indian bank with its
-  SWIFT code and branch address, plus any other way to pay (e.g. PayPal)
+- the payment block shows the account picked for that invoice (see below)
 - an optional exchange rate shows the rupee value in your invoice list
 
 The PDF follows the layout of the original Canva invoice: big "Invoice"

@@ -158,6 +158,14 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .paste-msg { margin: 0; font-size: 12.5px; }
 .paste-msg.ok { color: var(--ok); }
 .paste-msg.err { color: var(--req); }
+.acc-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
+.acc-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; background: var(--panel); align-content: start; }
+.acc-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 170px); gap: 8px; }
+.acc-head .acc-label { font-weight: 600; }
+.acc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.acc-fields .wide { grid-column: 1 / -1; }
+.acc-card .card-actions { align-items: flex-end; }
+@media (max-width: 480px) { .acc-head, .acc-fields { grid-template-columns: 1fr; } }
 .inp.filled { border-color: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); transition: box-shadow .3s, border-color .3s; }
 @media (max-width: 560px) { .row.c-top { grid-template-columns: 1fr 1fr; } .row.c-top > :first-child { grid-column: 1 / -1; } .row.c-half { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .row.c3 { grid-template-columns: 1fr 1fr; } .row.c3 > :last-child { grid-column: 1 / -1; } .row.c2 { grid-template-columns: 1fr; } }
@@ -439,6 +447,17 @@ table.list tr.click:hover td { background: var(--shell); }
             <p class="hint" id="fx-hint">Not printed on the invoice. Shows the rupee value in your invoice list.</p>
           </div>
 
+          <div class="row c-half">
+            <div class="f">
+              <label for="acct">Payment Account<span class="req">*</span></label>
+              <select class="inp" id="acct"></select>
+            </div>
+            <div class="f">
+              <label for="acct2">Also show</label>
+              <select class="inp" id="acct2"></select>
+            </div>
+          </div>
+          <p class="hint" id="acct-hint" style="margin-top:-8px"></p>
           <div class="f">
             <label for="notes">Notes to Customer</label>
             <textarea class="inp" id="notes" rows="3" placeholder="Optional. Printed under the payment information."></textarea>
@@ -500,50 +519,15 @@ table.list tr.click:hover td { background: var(--shell); }
               <div class="f"><label for="s-phone">Phone</label><input class="inp" id="s-phone"></div>
             </div>
             <div class="f"><label for="s-address">Address</label><textarea class="inp" id="s-address" rows="3"></textarea></div>
+            <div class="f"><label for="s-pan">PAN</label><input class="inp" id="s-pan" placeholder="Printed on every invoice"></div>
           </div>
         </div>
-        <div class="panel">
-          <div class="panel-h"><h2>Payment Information</h2></div>
+        <div class="panel" style="grid-column:1 / -1">
+          <div class="panel-h"><h2>Payment Accounts</h2><span class="note">Pick one on each invoice</span></div>
           <div class="panel-b">
-            <div class="row c2" style="grid-template-columns:1fr 1fr">
-              <div class="f"><label for="s-bank">Bank name</label><input class="inp" id="s-bank"></div>
-              <div class="f"><label for="s-accname">Account name</label><input class="inp" id="s-accname"></div>
-            </div>
-            <div class="row c2" style="grid-template-columns:1fr 1fr">
-              <div class="f"><label for="s-accno">Account number</label><input class="inp" id="s-accno" inputmode="numeric"></div>
-              <div class="f"><label for="s-ifsc">IFSC code</label><input class="inp" id="s-ifsc"></div>
-            </div>
-            <div class="f"><label for="s-pan">PAN</label><input class="inp" id="s-pan"></div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-h"><h2>International Payments</h2><span class="note">Used on International invoices</span></div>
-          <div class="panel-b">
-            <p class="hint">Fill in what you use. A USD invoice shows your USD account if you add one, a GBP invoice your GBP account; anything else shows your Indian bank with its SWIFT code.</p>
-            <p class="sub-h">Wire to your Indian bank</p>
-            <div class="row c-half">
-              <div class="f"><label for="s-swift">SWIFT / BIC code</label><input class="inp" id="s-swift" placeholder="e.g. ICICINBBXXX"></div>
-              <div class="f"><label for="s-bankaddr">Bank branch address</label><input class="inp" id="s-bankaddr"></div>
-            </div>
-            <p class="sub-h">USD account (e.g. Wise, Payoneer)</p>
-            <div class="row c-half">
-              <div class="f"><label for="s-usdbank">Bank name</label><input class="inp" id="s-usdbank"></div>
-              <div class="f"><label for="s-usdacc">Account number</label><input class="inp" id="s-usdacc" inputmode="numeric"></div>
-            </div>
-            <div class="row c-half">
-              <div class="f"><label for="s-usdach">ACH routing number</label><input class="inp" id="s-usdach" inputmode="numeric"></div>
-              <div class="f"><label for="s-usdwire">Wire routing number</label><input class="inp" id="s-usdwire" inputmode="numeric"></div>
-            </div>
-            <p class="sub-h">GBP account</p>
-            <div class="row c-half">
-              <div class="f"><label for="s-gbpbank">Bank name</label><input class="inp" id="s-gbpbank"></div>
-              <div class="f"><label for="s-gbpacc">Account number</label><input class="inp" id="s-gbpacc" inputmode="numeric"></div>
-            </div>
-            <div class="row c-half">
-              <div class="f"><label for="s-gbpsort">Sort code</label><input class="inp" id="s-gbpsort" placeholder="00-00-00"></div>
-              <div class="f"><label for="s-gbpiban">IBAN</label><input class="inp" id="s-gbpiban"></div>
-            </div>
-            <div class="f"><label for="s-payother">Other ways to pay</label><textarea class="inp" id="s-payother" rows="2" placeholder="e.g. PayPal: you@email.com"></textarea></div>
+            <p class="hint">Add every account clients can pay into: your Indian bank, a USD or GBP account (Wise, Payoneer), UPI or PayPal. Each invoice uses the one set to be picked automatically, and you can switch it on the invoice.</p>
+            <div class="acc-list" id="acc-list"></div>
+            <div><button type="button" class="btn sm" id="acc-add"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add account</button></div>
           </div>
         </div>
         <div class="panel">
@@ -607,6 +591,15 @@ table.list tr.click:hover td { background: var(--shell); }
     XX: { name: "Other country", cur: "USD", tax: "Tax ID" },
   };
   const curOf = (code) => CURRENCIES[code] || CURRENCIES.INR;
+  const ACCOUNT_TYPES = {
+    in: { name: "Indian bank", fields: [["bank", "Bank name"], ["accName", "Account name"], ["accNo", "Account number"], ["ifsc", "IFSC code"], ["swift", "SWIFT / BIC (for payments from abroad)", "e.g. ICICINBBXXX"], ["bankAddress", "Branch address (for payments from abroad)"]] },
+    usd: { name: "USD account", fields: [["bank", "Bank name", "e.g. Community Federal Savings Bank"], ["accName", "Account holder"], ["accNo", "Account number"], ["ach", "ACH routing number"], ["wire", "Wire routing number"], ["swift", "SWIFT / BIC"], ["bankAddress", "Bank address", "", "wide"]] },
+    gbp: { name: "GBP account (UK)", fields: [["bank", "Bank name"], ["accName", "Account holder"], ["accNo", "Account number"], ["sort", "Sort code", "00-00-00"], ["iban", "IBAN", "", "wide"], ["swift", "SWIFT / BIC"]] },
+    eur: { name: "EUR account (IBAN)", fields: [["bank", "Bank name"], ["accName", "Account holder"], ["iban", "IBAN", "", "wide"], ["swift", "SWIFT / BIC"], ["bankAddress", "Bank address"]] },
+    upi: { name: "UPI", fields: [["upi", "UPI ID", "name@okicici"], ["accName", "Name"]] },
+    other: { name: "PayPal / other", fields: [["text", "Details (printed as written)", "PayPal: you@email.com", "wide"]] },
+  };
+  const AUTO_OPTS = [["", "Only when I pick it"], ["dom", "Domestic invoices"], ["intl", "International invoices"], ["USD", "USD invoices"], ["GBP", "GBP invoices"], ["EUR", "EUR invoices"], ["INR", "INR invoices"], ["CAD", "CAD invoices"], ["AUD", "AUD invoices"], ["SGD", "SGD invoices"], ["AED", "AED invoices"]];
 
   /* ---------------- Dates & money ---------------- */
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -680,7 +673,7 @@ table.list tr.click:hover td { background: var(--shell); }
   let profile = { ...EMPTY_PROFILE };
   let customers = [];
   let history = [];
-  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new", email: "", contact: "" };
+  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null };
   const drafts = {};
 
   const slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "customer";
@@ -715,6 +708,7 @@ table.list tr.click:hover td { background: var(--shell); }
   function getForm() {
     return {
       mode: state.mode, currency: state.currency, country: state.country, status: state.status, email: state.email, contact: state.contact,
+      acct: state.acct, acct2: state.acct2, snap: state.snap,
       name: $("#cust-name").value, address: $("#cust-address").value, gstin: $("#cust-gstin").value,
       id: $("#inv-id").value, date: state.date, due: state.due, terms: state.terms,
       items: state.items.map(({ desc, qty, rate }) => ({ desc, qty, rate })),
@@ -724,13 +718,13 @@ table.list tr.click:hover td { background: var(--shell); }
   function freshForm(mode) {
     const country = mode === "intl" ? (profile.intlCountry || "US") : "IN";
     return {
-      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new", email: "", contact: "",
+      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null,
       name: "", address: "", gstin: "", id: nextId(todayISO()), date: todayISO(), due: "", terms: profile.due || "m1",
       items: [{ desc: "", qty: 1, rate: "" }], discount: "", gst: mode === "intl" ? "" : (profile.gst || ""), notes: "", fx: "",
     };
   }
   function setForm(f) {
-    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms, email: f.email || "", contact: f.contact || "" });
+    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms, email: f.email || "", contact: f.contact || "", acct: f.acct || "auto", acct2: f.acct2 || "", snap: f.snap || null });
     if (state.status === "new" && isAutoId(f.id)) f.id = nextId(f.date);
     $("#cust-name").value = f.name; $("#cust-address").value = f.address; $("#cust-gstin").value = f.gstin;
     $("#inv-id").value = f.id; $("#discount").value = f.discount; $("#gst-pct").value = f.gst; $("#notes").value = f.notes; $("#fx").value = f.fx || "";
@@ -744,6 +738,7 @@ table.list tr.click:hover td { background: var(--shell); }
     const c = inv.customer || {};
     return {
       mode, currency: inv.currency || "INR", country: inv.country || c.country || (mode === "intl" ? "US" : "IN"), status: inv.status || "sent", email: c.email || "", contact: c.contact || "",
+      acct: inv.account?.id || "auto", acct2: inv.account2?.id || "", snap: inv.account ? { a: inv.account, b: inv.account2 || null } : null,
       name: c.name || "", address: c.address || "", gstin: c.gstin || "", id: inv.id, date: inv.date, due: inv.due, terms,
       items: inv.items || [], discount: inv.discount || "", gst: inv.gstOn === false ? "" : (inv.gstPct || ""), notes: inv.notes || "", fx: inv.fx || "",
     };
@@ -1037,26 +1032,91 @@ ${text}
   }
   const ph = (v, fallback) => v ? esc(v) : `<span class="p-placeholder">${esc(fallback)}</span>`;
 
-  function payLines(p, d) {
+  /* ---------------- Payment accounts ---------------- */
+  const accounts = () => (Array.isArray(profile.accounts) ? profile.accounts : []);
+  const last4 = (v) => { const d = String(v || "").replace(/\s/g, ""); return d.length > 4 ? "••" + d.slice(-4) : d; };
+  const ACC_CUR = { usd: "USD", gbp: "GBP", eur: "EUR" };
+  function acctLabel(a) {
+    if (!a) return "";
+    const T = ACCOUNT_TYPES[a.type] || ACCOUNT_TYPES.other;
+    const tail = a.type === "upi" ? a.upi : a.type === "other" ? "" : last4(a.accNo || a.iban);
+    return [a.label || a.bank || T.name, tail].filter(Boolean).join(" · ");
+  }
+  function autoAccount() {
+    const A = accounts(); if (!A.length) return null;
+    const find = (f) => A.find(f);
+    const typeFor = { USD: "usd", GBP: "gbp", EUR: "eur" }[state.currency];
+    return find((a) => a.auto === state.currency) || find((a) => a.auto === (isIntl() ? "intl" : "dom"))
+      || (isIntl() ? (typeFor && find((a) => a.type === typeFor)) || find((a) => a.type === "in" && a.swift) : find((a) => a.type === "in" && state.currency === "INR") || find((a) => a.type === "upi"))
+      || find((a) => a.type === "in") || A[0];
+  }
+  function resolveAccounts() {
+    const A = accounts();
+    const byId = (id) => A.find((a) => a.id === id);
+    const a = state.acct === "auto" ? autoAccount() : byId(state.acct) || (state.snap?.a?.id === state.acct ? state.snap.a : null) || autoAccount();
+    let b = state.acct2 ? byId(state.acct2) || (state.snap?.b?.id === state.acct2 ? state.snap.b : null) : null;
+    if (b && a && b.id === a.id) b = null;
+    return { a, b };
+  }
+  function renderAccountSelects() {
+    const A = accounts();
+    const auto = autoAccount();
+    const known = new Set(A.map((a) => a.id));
+    const extra = (x) => (x && !known.has(x.id) ? `<option value="${esc(x.id)}">${esc(acctLabel(x))} (removed)</option>` : "");
+    $("#acct").innerHTML = A.length
+      ? `<option value="auto">Automatic · ${esc(acctLabel(auto))}</option>` + A.map((a) => `<option value="${esc(a.id)}">${esc(acctLabel(a))}</option>`).join("") + extra(state.snap?.a)
+      : `<option value="auto">Add an account in Your details</option>`;
+    $("#acct2").innerHTML = `<option value="">Nothing else</option>` + A.map((a) => `<option value="${esc(a.id)}">${esc(acctLabel(a))}</option>`).join("") + extra(state.snap?.b);
+    $("#acct").value = [...$("#acct").options].some((o) => o.value === state.acct) ? state.acct : "auto";
+    $("#acct2").value = [...$("#acct2").options].some((o) => o.value === state.acct2) ? state.acct2 : "";
+    const { a } = resolveAccounts();
+    const hint = $("#acct-hint");
+    if (!A.length) { hint.innerHTML = 'No payment accounts yet. <button type="button" class="linkish" data-go="details">Add one in Your details</button>'; return; }
+    const T = a ? (ACCOUNT_TYPES[a.type] || ACCOUNT_TYPES.other).name + "." : "";
+    const warn = a && isIntl() && a.type === "in" && !a.swift ? " Add its SWIFT code so clients abroad can pay into it." : "";
+    const mism = a && ACC_CUR[a.type] && ACC_CUR[a.type] !== state.currency ? ` This account takes ${ACC_CUR[a.type]}, but the invoice is in ${state.currency}.` : "";
+    hint.innerHTML = `${esc(T)}${esc(warn)}${esc(mism)} <button type="button" class="linkish" data-go="details">Manage accounts</button>`;
+  }
+
+  function acctLines(a, d, first) {
     const out = [];
     const add = (k, v, fb) => { if (v || fb) out.push(`<div>${k}: ${ph(v, fb || "")}</div>`); };
-    if (d.mode !== "intl") {
-      add("Bank Name", p.bank, "Bank"); add("Account Name", p.accName || p.name, "Account name");
-      add("Account Number", p.accNo, "Account number"); add("IFSC Code", p.ifsc, "IFSC");
-    } else if (d.cur === "USD" && p.usdAccNo) {
-      add("Account Holder", p.accName || p.name); add("Bank Name", p.usdBank); add("Account Number", p.usdAccNo);
-      add("ACH Routing Number", p.usdAch); add("Wire Routing Number", p.usdWire);
-    } else if (d.cur === "GBP" && (p.gbpAccNo || p.gbpIban)) {
-      add("Account Holder", p.accName || p.name); add("Bank Name", p.gbpBank); add("Account Number", p.gbpAccNo);
-      add("Sort Code", p.gbpSort); add("IBAN", p.gbpIban);
-    } else {
-      add("Beneficiary Name", p.accName || p.name, "Account name"); add("Bank Name", p.bank, "Bank");
-      add("Account Number", p.accNo, "Account number"); add("SWIFT / BIC", p.swift, "SWIFT code");
-      add("IFSC Code", p.ifsc); add("Bank Address", p.bankAddress);
+    const intl = d.mode === "intl";
+    const holder = a.accName || d.p.name;
+    switch (a.type) {
+      case "in":
+        if (!intl) { add("Bank Name", a.bank, "Bank"); add("Account Name", holder, "Account name"); add("Account Number", a.accNo, "Account number"); add("IFSC Code", a.ifsc, "IFSC"); }
+        else { add("Beneficiary Name", holder, "Account name"); add("Bank Name", a.bank, "Bank"); add("Account Number", a.accNo, "Account number"); add("SWIFT / BIC", a.swift, "SWIFT code"); add("IFSC Code", a.ifsc); add("Bank Address", a.bankAddress); }
+        break;
+      case "usd":
+        add("Account Holder", holder); add("Bank Name", a.bank); add("Account Number", a.accNo, "Account number"); add("ACH Routing Number", a.ach); add("Wire Routing Number", a.wire); add("SWIFT / BIC", a.swift); add("Bank Address", a.bankAddress);
+        break;
+      case "gbp":
+        add("Account Holder", holder); add("Bank Name", a.bank); add("Account Number", a.accNo); add("Sort Code", a.sort); add("IBAN", a.iban); add("SWIFT / BIC", a.swift);
+        break;
+      case "eur":
+        add("Account Holder", holder); add("Bank Name", a.bank); add("IBAN", a.iban, "IBAN"); add("SWIFT / BIC", a.swift); add("Bank Address", a.bankAddress);
+        break;
+      case "upi":
+        add("UPI ID", a.upi, "UPI ID"); add("Name", holder);
+        break;
+      default:
+        if (a.text) out.push(`<div style="white-space:pre-line">${esc(a.text)}</div>`);
     }
-    if (d.mode === "intl" && p.payOther) out.push(`<div class="addr" style="white-space:pre-line">${esc(p.payOther)}</div>`);
-    if (p.pan) add("PAN", p.pan);
+    if (!first && out.length) {
+      if (a.type === "other") out[0] = out[0].replace("<div", '<div style="margin-top:8px"');
+      else out.unshift(`<div style="margin-top:8px"><b>${a.type === "upi" ? "Or pay by UPI" : "Or pay to"}</b></div>`);
+    }
     return out.join("");
+  }
+  function payLines(p, d) {
+    const { a, b } = d.accts || { a: null, b: null };
+    let html = a ? acctLines(a, d, true)
+      : d.mode !== "intl" ? `<div>Bank Name: ${ph("", "Bank")}</div><div>Account Name: ${ph(p.name, "Account name")}</div><div>Account Number: ${ph("", "Account number")}</div><div>IFSC Code: ${ph("", "IFSC")}</div>`
+      : `<div>${ph("", "Add a payment account in Your details")}</div>`;
+    if (b) html += acctLines(b, d, false);
+    if (p.pan) html += `<div>PAN: ${esc(p.pan)}</div>`;
+    return html;
   }
 
   function paperHTML(d) {
@@ -1116,12 +1176,13 @@ ${text}
     const what = (calc.lines.find((l) => l.desc)?.desc || "").trim();
     return ["Invoice", [who, what].filter(Boolean).join(" "), (profile.name || "").trim()].filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]+/g, "").slice(0, 200) + ".pdf";
   }
-  const currentData = () => ({ p: profile, c: customerDraft(), id: $("#inv-id").value.trim(), date: state.date, due: state.due, calc: computed(), notes: $("#notes").value.trim(), cur: state.currency, mode: state.mode, country: state.country, fx: num($("#fx").value) });
+  const currentData = () => ({ p: profile, c: customerDraft(), id: $("#inv-id").value.trim(), date: state.date, due: state.due, calc: computed(), notes: $("#notes").value.trim(), cur: state.currency, mode: state.mode, country: state.country, fx: num($("#fx").value), accts: resolveAccounts() });
 
   function update() {
     if (state.terms !== "custom") state.due = dueFrom(state.date, state.terms);
     $("#inv-date").value = state.date; $("#inv-due").value = state.due; $("#terms").value = state.terms;
     $("#terms").querySelector('[value="custom"]').hidden = state.terms !== "custom";
+    renderAccountSelects();
     const d = currentData();
     const sym = curOf(d.cur).sym.trim();
     $$(".cur").forEach((el) => { el.textContent = sym; });
@@ -1173,6 +1234,7 @@ ${text}
       date: state.date, due: state.due, terms: state.terms,
       items: d.calc.lines.filter((l) => l.desc || l.rate).map(({ desc, qty, rate }) => ({ desc, qty, rate })),
       discount: d.calc.discount, gstPct: d.calc.pct, total: d.calc.total, notes: d.notes,
+      account: d.accts.a ? { ...d.accts.a } : null, account2: d.accts.b ? { ...d.accts.b } : null,
       customer, status: prev?.status === "paid" ? "paid" : status, createdAt: prev?.createdAt || new Date().toISOString(),
     };
     const results = await Promise.allSettled([Store.saveCustomer(customer), Store.saveInvoice(inv)]);
@@ -1335,12 +1397,62 @@ ${text}
   /* ---------------- Details view ---------------- */
   const FIELDS = {
     "#s-name": "name", "#s-title": "title", "#s-email": "email", "#s-phone": "phone", "#s-address": "address",
-    "#s-bank": "bank", "#s-accname": "accName", "#s-accno": "accNo", "#s-ifsc": "ifsc", "#s-pan": "pan",
+    "#s-pan": "pan",
     "#s-due": "due", "#s-prefix": "prefix", "#s-gst": "gst", "#s-intlcountry": "intlCountry",
-    "#s-swift": "swift", "#s-bankaddr": "bankAddress", "#s-usdbank": "usdBank", "#s-usdacc": "usdAccNo", "#s-usdach": "usdAch", "#s-usdwire": "usdWire",
-    "#s-gbpbank": "gbpBank", "#s-gbpacc": "gbpAccNo", "#s-gbpsort": "gbpSort", "#s-gbpiban": "gbpIban", "#s-payother": "payOther",
   };
-  const UPPER = new Set(["ifsc", "pan", "swift", "gbpIban"]);
+  const UPPER = new Set(["pan"]);
+  const ACC_UPPER = new Set(["ifsc", "swift", "iban"]);
+  let draftAccounts = [];
+  const typeOpts = Object.entries(ACCOUNT_TYPES).map(([k, t]) => `<option value="${k}">${esc(t.name)}</option>`).join("");
+  const autoOpts = AUTO_OPTS.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+  function renderAccounts() {
+    const box = $("#acc-list");
+    box.innerHTML = draftAccounts.length ? "" : '<p class="empty" style="padding:4px 0">No accounts yet. Add the account clients should pay into.</p>';
+    draftAccounts.forEach((a) => {
+      const T = ACCOUNT_TYPES[a.type] || ACCOUNT_TYPES.other;
+      const el = document.createElement("div");
+      el.className = "acc-card";
+      el.innerHTML = `
+        <div class="acc-head">
+          <input class="inp acc-label" data-k="label" value="${esc(a.label)}" placeholder="Name it, e.g. ICICI savings" aria-label="Account name">
+          <select class="inp" data-k="type" aria-label="Account type">${typeOpts}</select>
+        </div>
+        <div class="acc-fields">${T.fields.map(([k, l, phd, wide]) => `<div class="f${wide ? " wide" : ""}"><label>${esc(l)}</label>${k === "text"
+          ? `<textarea class="inp" data-k="${k}" rows="3" placeholder="${esc(phd || "")}">${esc(a[k])}</textarea>`
+          : `<input class="inp" data-k="${k}" value="${esc(a[k])}" placeholder="${esc(phd || "")}">`}</div>`).join("")}</div>
+        <div class="card-actions">
+          <div class="f" style="flex:1 1 200px"><label>Pick automatically for</label><select class="inp" data-k="auto">${autoOpts}</select></div>
+          <span class="sp"></span>
+          <span class="confirm" hidden>Remove? <button type="button" class="linkish danger" data-act="yes">Remove</button> · <button type="button" class="linkish" data-act="no">Keep</button></span>
+          <button type="button" class="linkish danger" data-act="del">Remove</button>
+        </div>`;
+      el.querySelector('[data-k="type"]').value = a.type;
+      el.querySelector('[data-k="auto"]').value = a.auto || "";
+      el.querySelectorAll("[data-k]").forEach((inp) => inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", () => {
+        a[inp.dataset.k] = inp.value;
+        if (inp.dataset.k === "type") renderAccounts();
+      }));
+      const conf = el.querySelector(".confirm"), del = el.querySelector('[data-act="del"]');
+      del.addEventListener("click", () => { conf.hidden = false; del.hidden = true; });
+      el.querySelector('[data-act="no"]').addEventListener("click", () => { conf.hidden = true; del.hidden = false; });
+      el.querySelector('[data-act="yes"]').addEventListener("click", () => { draftAccounts = draftAccounts.filter((x) => x !== a); renderAccounts(); });
+      box.appendChild(el);
+    });
+  }
+  $("#acc-add").addEventListener("click", () => {
+    draftAccounts.push({ id: "acc-" + Date.now().toString(36), type: "in", label: "", accName: $("#s-name").value.trim() || profile.name, auto: draftAccounts.length ? "" : "dom" });
+    renderAccounts();
+    $("#acc-list").lastElementChild?.querySelector(".acc-label")?.focus();
+  });
+  function migrateAccounts(p) {
+    if (Array.isArray(p.accounts)) return p.accounts;
+    const A = [];
+    if (p.bank || p.accNo || p.ifsc) A.push({ id: "acc-main", type: "in", label: p.bank || "Bank account", bank: p.bank, accName: p.accName, accNo: p.accNo, ifsc: p.ifsc, swift: p.swift, bankAddress: p.bankAddress, auto: "dom" });
+    if (p.usdAccNo) A.push({ id: "acc-usd", type: "usd", label: `${p.usdBank || "USD account"} (USD)`, bank: p.usdBank, accName: p.accName || p.name, accNo: p.usdAccNo, ach: p.usdAch, wire: p.usdWire, auto: "USD" });
+    if (p.gbpAccNo || p.gbpIban) A.push({ id: "acc-gbp", type: "gbp", label: `${p.gbpBank || "GBP account"} (GBP)`, bank: p.gbpBank, accName: p.accName || p.name, accNo: p.gbpAccNo, sort: p.gbpSort, iban: p.gbpIban, auto: "GBP" });
+    if (p.payOther) A.push({ id: "acc-other", type: "other", label: "Other ways to pay", text: p.payOther, auto: "" });
+    return A;
+  }
   let draftPhoto = "";
   const showPhoto = (src) => { $("#s-photo-img").hidden = !src; $("#s-photo-ph").hidden = !!src; if (src) $("#s-photo-img").src = src; };
   function openDetails() {
@@ -1349,6 +1461,7 @@ ${text}
     $("#s-due").value = profile.due || "m1"; $("#s-prefix").value = profile.prefix || "INV"; $("#s-intlcountry").value = profile.intlCountry || "US";
     $("#s-showno").checked = profile.showNo !== false;
     draftPhoto = profile.photo || ""; showPhoto(draftPhoto);
+    draftAccounts = accounts().map((a) => ({ ...a })); renderAccounts();
   }
   $("#s-photo").addEventListener("change", (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -1368,6 +1481,11 @@ ${text}
     const next = { ...profile };
     for (const [sel, key] of Object.entries(FIELDS)) { let v = $(sel).value.trim(); if (UPPER.has(key)) v = v.toUpperCase(); next[key] = v; }
     next.gst = num(next.gst); next.prefix = next.prefix || "INV"; next.showNo = $("#s-showno").checked; next.photo = draftPhoto;
+    next.accounts = draftAccounts.map((a) => {
+      const keep = { id: a.id, type: a.type, label: (a.label || "").trim(), auto: a.auto || "" };
+      for (const [k] of (ACCOUNT_TYPES[a.type] || ACCOUNT_TYPES.other).fields) { let v = String(a[k] ?? "").trim(); if (ACC_UPPER.has(k)) v = v.toUpperCase(); if (v) keep[k] = v; }
+      return keep;
+    });
     profile = next;
     try { await Store.saveProfile(profile); setMsg("Your details are saved.", "ok", "#s-msg"); }
     catch { setMsg("Could not save your details. Try again.", "err", "#s-msg"); }
@@ -1418,6 +1536,8 @@ ${text}
     if (open) { syncEngineLabel(); $("#paste-text").focus(); }
   });
   $("#paste-go").addEventListener("click", runPaste);
+  $("#acct").addEventListener("change", (e) => { state.acct = e.target.value; update(); });
+  $("#acct2").addEventListener("change", (e) => { state.acct2 = e.target.value; update(); });
   $("#paste-clear").addEventListener("click", () => { $("#paste-text").value = ""; $("#paste-msg").textContent = ""; $("#paste-text").focus(); });
 
   // Printing only works when the page is opened directly in a browser, not inside an embedded viewer.
@@ -1430,6 +1550,7 @@ ${text}
     try {
       const [p, cs, hs] = await Promise.all([Store.profile(), Store.customers(), Store.invoices()]);
       profile = { ...EMPTY_PROFILE, ...(p || {}) };
+      profile.accounts = migrateAccounts(profile);
       customers = cs || []; history = hs || [];
     } catch (err) { console.warn("Could not load saved data", err); }
     if (state.status === "new" && !$("#cust-name").value.trim()) setForm(freshForm(state.mode));
