@@ -37,9 +37,9 @@ you switch to another account and *Also show* adds a second way to pay.
 Each saved invoice remembers the accounts it used.
 
 **Brand:** under *Your details → Brand* add your business name and a wide
-banner image (about 4:1). The banner runs across the top of the app and,
-if you tick the option, across the top of every invoice. Long invoices
-shrink slightly to stay on one A4 page.
+banner image (about 4:1). The banner runs across the top of every invoice
+(untick the option to leave it off); the app itself stays unbranded. Long
+invoices shrink slightly to stay on one A4 page.
 
 **Currencies:** every invoice has a currency switch (INR, USD, GBP, EUR, CAD,
 AUD, SGD, AED, JPY).

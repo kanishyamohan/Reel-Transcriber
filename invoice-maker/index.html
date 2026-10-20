@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:opsz,wght,SOFT,WONK@144,900,100,1&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: a soft grey app shell holding a pill nav bar, a page header with actions, then two white panels: form (left) and live A4 preview (right). */
 :root {
@@ -32,7 +32,6 @@
   --info-bg: #eef0f3;
   --shadow: 0 1px 2px rgba(20,22,26,.04);
   --font-ui: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-brand: "Fraunces", "Cooper Black", Georgia, serif;
   --font-paper: "Figtree", "Proxima Nova", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -159,10 +158,6 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .paste-msg { margin: 0; font-size: 12.5px; }
 .paste-msg.ok { color: var(--ok); }
 .paste-msg.err { color: var(--req); }
-.brand-banner { height: clamp(84px, 13vw, 168px); border-radius: 16px; background-color: var(--sunken); background-size: cover; background-position: center; margin-bottom: 12px; border: 1px solid var(--line); }
-.brand-name { font-family: var(--font-brand); font-weight: 900; font-size: 19px; letter-spacing: -.01em; white-space: nowrap; flex: none; font-variation-settings: "SOFT" 100, "WONK" 1; }
-.logo .mark { font-family: var(--font-brand); font-weight: 900; font-size: 21px; line-height: 1; font-variation-settings: "SOFT" 100, "WONK" 1; }
-@media (max-width: 760px) { .brand-name { display: none; } }
 .banner-prev { height: 96px; border-radius: 10px; background-color: var(--sunken); background-size: cover; background-position: center; border: 1px dashed var(--line-strong); display: grid; place-items: center; color: var(--muted); font-size: 12.5px; }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
 .toolbar .search { flex: 1 1 260px; }
@@ -332,12 +327,10 @@ table.list tr.click:hover td { background: var(--shell); }
 </head>
 <body>
 <div class="app">
-  <div class="brand-banner" id="brand-banner" role="img" aria-label="Studio banner" hidden></div>
   <nav class="nav" aria-label="Main">
-    <div class="logo" aria-hidden="true" id="logo"><span class="mark" id="logo-mark" hidden></span>
-      <svg id="logo-waves" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M4 14c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M6.5 18.5c1.8-1.2 3.7-1.2 5.5 0s3.7 1.2 5.5 0"/></svg>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M4 14c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M6.5 18.5c1.8-1.2 3.7-1.2 5.5 0s3.7 1.2 5.5 0"/></svg>
     </div>
-    <span class="brand-name" id="brand-name" hidden></span>
     <div class="tabs" role="tablist">
       <button class="tab" data-go="create" data-mode="dom" aria-current="page">Domestic</button>
       <button class="tab" data-go="create" data-mode="intl">International</button>
@@ -545,7 +538,7 @@ table.list tr.click:hover td { background: var(--shell); }
       <p class="msg" id="s-msg" role="status" aria-live="polite"></p>
       <div class="details-grid">
         <div class="panel" style="grid-column:1 / -1">
-          <div class="panel-h"><h2>Brand</h2><span class="note">Shown in the app and on your invoices</span></div>
+          <div class="panel-h"><h2>Brand</h2><span class="note">Shown on your invoices</span></div>
           <div class="panel-b">
             <div class="row c-half">
               <div class="f"><label for="s-biz">Business name</label><input class="inp" id="s-biz" placeholder="e.g. Kanishyamo Studios"></div>
@@ -834,16 +827,8 @@ table.list tr.click:hover td { background: var(--shell); }
   });
   let brand = { banner: "" };
   const bannerOnPdf = () => !!brand.banner && profile.bannerOnPdf !== false;
-  function syncBrand() {
-    const b = $("#brand-banner");
-    b.hidden = !brand.banner;
-    b.style.backgroundImage = brand.banner ? `url("${brand.banner}")` : "";
-    const biz = (profile.businessName || "").trim();
-    $("#brand-name").hidden = !biz; $("#brand-name").textContent = biz;
-    $("#logo-mark").hidden = !biz; $("#logo-mark").textContent = biz ? biz[0].toUpperCase() : "";
-    $("#logo-waves").style.display = biz ? "none" : "";
-    document.title = biz ? `${biz} · Invoices` : "Invoice Maker";
-  }
+  // Branding appears on the invoice only; the app itself stays unbranded.
+  function syncBrand() {}
   function fitPaper(node) {
     const inner = node.querySelector(".p-inner"); if (!inner) return;
     inner.style.transform = ""; inner.style.width = "";
