@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Fraunces:opsz,wght,SOFT,WONK@144,900,100,1&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: a soft grey app shell holding a pill nav bar, a page header with actions, then two white panels: form (left) and live A4 preview (right). */
 :root {
@@ -32,6 +32,7 @@
   --info-bg: #eef0f3;
   --shadow: 0 1px 2px rgba(20,22,26,.04);
   --font-ui: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-brand: "Fraunces", "Cooper Black", Georgia, serif;
   --font-paper: "Figtree", "Proxima Nova", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -158,6 +159,11 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .paste-msg { margin: 0; font-size: 12.5px; }
 .paste-msg.ok { color: var(--ok); }
 .paste-msg.err { color: var(--req); }
+.brand-banner { height: clamp(84px, 13vw, 168px); border-radius: 16px; background-color: var(--sunken); background-size: cover; background-position: center; margin-bottom: 12px; border: 1px solid var(--line); }
+.brand-name { font-family: var(--font-brand); font-weight: 900; font-size: 19px; letter-spacing: -.01em; white-space: nowrap; flex: none; font-variation-settings: "SOFT" 100, "WONK" 1; }
+.logo .mark { font-family: var(--font-brand); font-weight: 900; font-size: 21px; line-height: 1; font-variation-settings: "SOFT" 100, "WONK" 1; }
+@media (max-width: 760px) { .brand-name { display: none; } }
+.banner-prev { height: 96px; border-radius: 10px; background-color: var(--sunken); background-size: cover; background-position: center; border: 1px dashed var(--line-strong); display: grid; place-items: center; color: var(--muted); font-size: 12.5px; }
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
 .toolbar .search { flex: 1 1 260px; }
 .toolbar select.inp { flex: 0 1 170px; width: auto; }
@@ -302,6 +308,10 @@ table.list tr.click:hover td { background: var(--shell); }
 .p-pay { margin-top: 24px; line-height: 1.72; }
 .p-pay b { font-weight: 700; }
 .p-foot { font-size: 11px; margin-top: 6px; }
+.p-banner { height: 128px; margin: -58px -30px 30px -37px; background-size: cover; background-position: center; }
+.paper.has-banner .p-title { margin-top: -6px; }
+.paper.has-banner .p-me { padding-top: 0; }
+.p-inner { transform-origin: top left; }
 .p-placeholder { color: #a3a3a3; }
 .p-notes { margin-top: 16px; white-space: pre-line; line-height: 1.5; }
 
@@ -322,10 +332,12 @@ table.list tr.click:hover td { background: var(--shell); }
 </head>
 <body>
 <div class="app">
+  <div class="brand-banner" id="brand-banner" role="img" aria-label="Studio banner" hidden></div>
   <nav class="nav" aria-label="Main">
-    <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M4 14c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M6.5 18.5c1.8-1.2 3.7-1.2 5.5 0s3.7 1.2 5.5 0"/></svg>
+    <div class="logo" aria-hidden="true" id="logo"><span class="mark" id="logo-mark" hidden></span>
+      <svg id="logo-waves" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 9c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M4 14c2.7-2.4 5.3-2.4 8 0s5.3 2.4 8 0"/><path d="M6.5 18.5c1.8-1.2 3.7-1.2 5.5 0s3.7 1.2 5.5 0"/></svg>
     </div>
+    <span class="brand-name" id="brand-name" hidden></span>
     <div class="tabs" role="tablist">
       <button class="tab" data-go="create" data-mode="dom" aria-current="page">Domestic</button>
       <button class="tab" data-go="create" data-mode="intl">International</button>
@@ -532,6 +544,19 @@ table.list tr.click:hover td { background: var(--shell); }
       </div>
       <p class="msg" id="s-msg" role="status" aria-live="polite"></p>
       <div class="details-grid">
+        <div class="panel" style="grid-column:1 / -1">
+          <div class="panel-h"><h2>Brand</h2><span class="note">Shown in the app and on your invoices</span></div>
+          <div class="panel-b">
+            <div class="row c-half">
+              <div class="f"><label for="s-biz">Business name</label><input class="inp" id="s-biz" placeholder="e.g. Kanishyamo Studios"></div>
+              <div class="f"><span class="lbl">Banner</span>
+                <div class="photo-row"><label class="btn sm" for="s-banner">Upload banner</label><input type="file" id="s-banner" accept="image/*" hidden>
+                <button type="button" class="linkish" id="s-banner-rm">Remove</button><span class="hint">Wide image, about 4:1</span></div></div>
+            </div>
+            <div class="banner-prev" id="s-banner-prev">No banner yet</div>
+            <label class="check"><input type="checkbox" id="s-banner-pdf"> Show the banner across the top of my invoices</label>
+          </div>
+        </div>
         <div class="panel">
           <div class="panel-h"><h2>You</h2></div>
           <div class="panel-b">
@@ -668,6 +693,11 @@ table.list tr.click:hover td { background: var(--shell); }
   const Store = {
     db: null,
     async init() { try { if (window.claude && typeof window.claude.use === "function") this.db = await window.claude.use("db"); } catch { this.db = null; } },
+    async brand() {
+      if (this.db) { const s = await this.db.doc("settings/brand").get(); return s.exists ? { ...s.data() } : null; }
+      return LS.get("brand", null);
+    },
+    async saveBrand(b) { if (this.db) return this.db.doc("settings/brand").set(b); LS.set("brand", b); },
     async profile() {
       if (this.db) { const s = await this.db.doc("settings/profile").get(); return s.exists ? { ...s.data() } : null; }
       return LS.get("profile", null);
@@ -802,6 +832,26 @@ table.list tr.click:hover td { background: var(--shell); }
     const t = e.target.closest("[data-go]");
     if (t) { e.preventDefault(); go(t.dataset.go, { fresh: t.dataset.fresh === "1", mode: t.dataset.mode }); }
   });
+  let brand = { banner: "" };
+  const bannerOnPdf = () => !!brand.banner && profile.bannerOnPdf !== false;
+  function syncBrand() {
+    const b = $("#brand-banner");
+    b.hidden = !brand.banner;
+    b.style.backgroundImage = brand.banner ? `url("${brand.banner}")` : "";
+    const biz = (profile.businessName || "").trim();
+    $("#brand-name").hidden = !biz; $("#brand-name").textContent = biz;
+    $("#logo-mark").hidden = !biz; $("#logo-mark").textContent = biz ? biz[0].toUpperCase() : "";
+    $("#logo-waves").style.display = biz ? "none" : "";
+    document.title = biz ? `${biz} · Invoices` : "Invoice Maker";
+  }
+  function fitPaper(node) {
+    const inner = node.querySelector(".p-inner"); if (!inner) return;
+    inner.style.transform = ""; inner.style.width = "";
+    const avail = 1123 - inner.offsetTop - 30;
+    const h = inner.scrollHeight;
+    if (h > avail) { const k = Math.max(0.55, avail / h); inner.style.width = inner.clientWidth / k + "px"; inner.style.transform = `scale(${k})`; }
+  }
+  const paperDoc = (d) => (bannerOnPdf() ? `<div class="p-banner" style="background-image:url('${brand.banner}')"></div>` : "") + `<div class="p-inner">${paperHTML(d)}</div>`;
   function syncMe() {
     $("#me-btn").innerHTML = profile.photo ? `<img src="${esc(profile.photo)}" alt="">` : `<span class="ini">${esc(profile.name ? initials(profile.name) : "?")}</span>`;
   }
@@ -1231,7 +1281,9 @@ ${text}
     $("#fx-f").hidden = !isIntl() || d.cur === "INR";
     $("#fx-lbl").textContent = `Exchange rate (₹ per 1 ${d.cur})`;
     $("#fx-hint").textContent = d.fx && d.calc.total ? `About ${money(d.calc.total * d.fx, "INR")}. Not printed on the invoice.` : "Not printed on the invoice. Shows the rupee value in your invoice list.";
-    $("#paper").innerHTML = paperHTML(d);
+    $("#paper").classList.toggle("has-banner", bannerOnPdf());
+    $("#paper").innerHTML = paperDoc(d);
+    fitPaper($("#paper"));
     $("#file-name").textContent = fileName(d.c, d.calc);
     $("#create-title").textContent = !state.origId ? (isIntl() ? "Create International Invoice" : "Create New Invoice") : `Edit Invoice ${d.id}`;
     $("#save-draft-txt").textContent = state.origId ? "Save changes" : "Save as Draft";
@@ -1289,14 +1341,15 @@ ${text}
     if (!window.html2canvas || !window.jspdf) throw new Error("The PDF tools did not load. Check your connection and reload the page.");
     try { await document.fonts.ready; } catch {}
     const host = $("#capture-host");
-    host.innerHTML = `<div class="paper">${paperHTML(d)}</div>`;
+    host.innerHTML = `<div class="paper${bannerOnPdf() ? " has-banner" : ""}">${paperDoc(d)}</div>`;
     const node = host.firstElementChild;
     await Promise.all([...node.querySelectorAll("img")].map((im) => im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; })));
+    fitPaper(node);
     const canvas = await window.html2canvas(node, { scale: 3, backgroundColor: "#ffffff", useCORS: true, logging: false, width: 794, height: 1123, windowWidth: 794 });
     host.innerHTML = "";
     const pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4", compress: true });
     pdf.addImage(canvas.toDataURL("image/jpeg", 0.94), "JPEG", 0, 0, 595.28, 841.89, undefined, "FAST");
-    pdf.setProperties({ title: fileName(d.c, d.calc).replace(/\.pdf$/, ""), author: d.p.name || "", subject: d.id, creator: "Invoice Maker" });
+    pdf.setProperties({ title: fileName(d.c, d.calc).replace(/\.pdf$/, ""), author: d.p.name || "", subject: d.id, creator: (d.p.businessName || "").trim() || "Invoice Maker" });
     return pdf;
   }
   async function saveDraft() {
@@ -1589,6 +1642,8 @@ ${text}
     $("#s-due").value = profile.due || "m1"; $("#s-prefix").value = profile.prefix || "INV"; $("#s-intlcountry").value = profile.intlCountry || "US";
     $("#s-showno").checked = profile.showNo !== false;
     draftPhoto = profile.photo || ""; showPhoto(draftPhoto);
+    $("#s-biz").value = profile.businessName || ""; $("#s-banner-pdf").checked = profile.bannerOnPdf !== false;
+    draftBanner = brand.banner || ""; showBanner(draftBanner);
     draftAccounts = accounts().map((a) => ({ ...a })); renderAccounts();
   }
   $("#s-photo").addEventListener("change", (e) => {
@@ -1603,12 +1658,36 @@ ${text}
     img.src = url;
   });
   $("#s-photo-rm").addEventListener("click", () => { draftPhoto = ""; showPhoto(""); });
+  let draftBanner = "";
+  function showBanner(src) {
+    const el = $("#s-banner-prev");
+    el.style.backgroundImage = src ? `url("${src}")` : ""; el.textContent = src ? "" : "No banner yet";
+  }
+  $("#s-banner").addEventListener("change", (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const w = Math.min(1400, img.width), h = Math.round(w * img.height / img.width);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      let q = 0.82, out = c.toDataURL("image/jpeg", q);
+      while (out.length > 230000 && q > 0.4) { q -= 0.08; out = c.toDataURL("image/jpeg", q); }
+      draftBanner = out; showBanner(out); URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+  $("#s-banner-rm").addEventListener("click", () => { draftBanner = ""; showBanner(""); });
   $("#settings").addEventListener("submit", async (e) => {
     e.preventDefault();
     const wasAuto = isAutoId($("#inv-id").value);
     const next = { ...profile };
     for (const [sel, key] of Object.entries(FIELDS)) { let v = $(sel).value.trim(); if (UPPER.has(key)) v = v.toUpperCase(); next[key] = v; }
     next.gst = num(next.gst); next.prefix = next.prefix || "INV"; next.showNo = $("#s-showno").checked; next.photo = draftPhoto;
+    next.businessName = $("#s-biz").value.trim(); next.bannerOnPdf = $("#s-banner-pdf").checked;
+    if (draftBanner !== (brand.banner || "")) {
+      try { await Store.saveBrand({ banner: draftBanner }); brand = { banner: draftBanner }; }
+      catch { setMsg("Could not save the banner. Try a smaller image.", "err", "#s-msg"); }
+    }
     next.accounts = draftAccounts.map((a) => {
       const keep = { id: a.id, type: a.type, label: (a.label || "").trim(), auto: a.auto || "" };
       for (const [k] of (ACCOUNT_TYPES[a.type] || ACCOUNT_TYPES.other).fields) { let v = String(a[k] ?? "").trim(); if (ACC_UPPER.has(k)) v = v.toUpperCase(); if (v) keep[k] = v; }
@@ -1618,7 +1697,7 @@ ${text}
     try { await Store.saveProfile(profile); setMsg("Your details are saved.", "ok", "#s-msg"); }
     catch { setMsg("Could not save your details. Try again.", "err", "#s-msg"); }
     if (wasAuto && state.status === "new") { $("#inv-id").value = nextId(state.date); state.terms = profile.due; }
-    syncMe(); update();
+    syncMe(); syncBrand(); update();
   });
 
   /* ---------------- Wire up the form ---------------- */
@@ -1676,13 +1755,14 @@ ${text}
   (async () => {
     await Store.init();
     try {
-      const [p, cs, hs] = await Promise.all([Store.profile(), Store.customers(), Store.invoices()]);
+      const [p, cs, hs, br] = await Promise.all([Store.profile(), Store.customers(), Store.invoices(), Store.brand().catch(() => null)]);
+      brand = { banner: "", ...(br || {}) };
       profile = { ...EMPTY_PROFILE, ...(p || {}) };
       profile.accounts = migrateAccounts(profile);
       customers = cs || []; history = hs || [];
     } catch (err) { console.warn("Could not load saved data", err); }
     if (state.status === "new" && !$("#cust-name").value.trim()) setForm(freshForm(state.mode));
-    syncMe(); refreshSuggestions(); update();
+    syncMe(); syncBrand(); refreshSuggestions(); update();
     if (!profile.name) { go("details"); setMsg("Add your details once. They go on every invoice.", "", "#s-msg"); }
   })();
 })();
