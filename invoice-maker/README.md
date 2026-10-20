@@ -12,8 +12,9 @@ A single-page invoice generator. You type the **customer name** and the
 
 Pages: **Domestic** and **International** (form + live preview, Save as
 Draft, Download PDF),
-**Invoices** (every invoice with Draft / Sent / Overdue / Paid status and
-totals), **Customers** (edit or delete saved customers) and **Your details**.
+**Invoices** (search, filter by status and type, change status inline,
+edit, duplicate, download, delete, and bulk mark paid / sent / delete, with
+Waiting / Overdue / Paid totals), **Customers** (edit or delete saved customers) and **Your details**.
 Discount, GST % and notes to the customer are optional.
 
 **Paste a client's message:** open *Paste client's message* at the top of

@@ -158,6 +158,21 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .paste-msg { margin: 0; font-size: 12.5px; }
 .paste-msg.ok { color: var(--ok); }
 .paste-msg.err { color: var(--req); }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+.toolbar .search { flex: 1 1 260px; }
+.toolbar select.inp { flex: 0 1 170px; width: auto; }
+.bulk { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--shell); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.bulk .sp { flex: 1; }
+.row-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
+.act { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 5px 9px; font-size: 12px; font-weight: 600; }
+.act:hover { border-color: var(--line-strong); }
+.act.danger:hover { color: var(--req); border-color: var(--req); }
+.st-cell { display: flex; gap: 6px; align-items: center; }
+select.inp.st-sel { width: auto; padding: 5px 26px 5px 9px; font-size: 12px; font-weight: 600; border-radius: 999px; background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; }
+.st-sel.st-paid { background-color: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.st-sel.st-draft { background-color: var(--info-bg); color: var(--muted); border-color: transparent; }
+.st-sel.st-sent, .st-sel.st-overdue { background-color: var(--info-bg); color: var(--fg); border-color: transparent; }
+input[type="checkbox"].pick { width: 16px; height: 16px; accent-color: var(--ink); margin: 0; vertical-align: middle; }
 .acc-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
 .acc-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; background: var(--panel); align-content: start; }
 .acc-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 170px); gap: 8px; }
@@ -329,7 +344,7 @@ table.list tr.click:hover td { background: var(--shell); }
         <h1 id="create-title">Create New Invoice</h1>
       </div>
       <div class="head-actions">
-        <button class="btn" type="button" id="save-draft"><svg class="i" viewBox="0 0 24 24"><path d="M7 4h8l4 4v12H7z"/><path d="M5 7v13a1 1 0 0 0 1 1h10"/></svg>Save as Draft</button>
+        <button class="btn" type="button" id="save-draft"><svg class="i" viewBox="0 0 24 24"><path d="M7 4h8l4 4v12H7z"/><path d="M5 7v13a1 1 0 0 0 1 1h10"/></svg><span id="save-draft-txt">Save as Draft</span></button>
         <button class="btn" type="button" id="print" hidden>Print</button>
         <button class="btn ink" type="button" id="download"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Download PDF</button>
       </div>
@@ -480,8 +495,24 @@ table.list tr.click:hover td { background: var(--shell); }
     </div>
     <div class="stats" id="stats"></div>
     <div class="panel" style="margin-top:16px">
-      <div class="panel-h"><h2>All invoices</h2><span class="note">Click a row to open it</span></div>
-      <div class="panel-b"><div class="table-wrap" id="inv-table"></div></div>
+      <div class="panel-h"><h2>All invoices</h2><span class="note" id="inv-count"></span></div>
+      <div class="panel-b">
+        <div class="toolbar">
+          <input class="inp search" id="inv-q" type="search" placeholder="Search invoice no., customer, item or notes" aria-label="Search invoices">
+          <select class="inp" id="inv-status" aria-label="Filter by status"><option value="">All statuses</option><option value="draft">Draft</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="paid">Paid</option></select>
+          <select class="inp" id="inv-type" aria-label="Filter by type"><option value="">All types</option><option value="dom">Domestic</option><option value="intl">International</option></select>
+        </div>
+        <div class="bulk" id="inv-bulk" hidden>
+          <b id="bulk-n"></b>
+          <button type="button" class="btn sm" data-bulk="paid">Mark paid</button>
+          <button type="button" class="btn sm" data-bulk="sent">Mark sent</button>
+          <button type="button" class="linkish" data-bulk="clear">Clear selection</button>
+          <span class="sp"></span>
+          <span id="bulk-confirm" hidden>Delete <span id="bulk-confirm-n"></span>? <button type="button" class="linkish danger" data-bulk="yes">Delete</button> · <button type="button" class="linkish" data-bulk="no">Keep</button></span>
+          <button type="button" class="linkish danger" id="bulk-del" data-bulk="del">Delete selected</button>
+        </div>
+        <div class="table-wrap" id="inv-table"></div>
+      </div>
     </div>
   </section>
 
@@ -662,6 +693,10 @@ table.list tr.click:hover td { background: var(--shell); }
       if (this.db) return this.db.collection("invoices").doc(inv.id).set(inv);
       LS.set("invoices", LS.get("invoices", []).filter((x) => x.id !== inv.id).concat(inv));
     },
+    async deleteInvoice(id) {
+      if (this.db) return this.db.collection("invoices").doc(id).delete();
+      LS.set("invoices", LS.get("invoices", []).filter((x) => x.id !== id));
+    },
   };
 
   /* ---------------- State ---------------- */
@@ -673,7 +708,7 @@ table.list tr.click:hover td { background: var(--shell); }
   let profile = { ...EMPTY_PROFILE };
   let customers = [];
   let history = [];
-  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null };
+  const state = { mode: "dom", currency: "INR", country: "IN", id: "", date: todayISO(), due: "", terms: "m1", items: [], status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null, origId: null };
   const drafts = {};
 
   const slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "customer";
@@ -708,7 +743,7 @@ table.list tr.click:hover td { background: var(--shell); }
   function getForm() {
     return {
       mode: state.mode, currency: state.currency, country: state.country, status: state.status, email: state.email, contact: state.contact,
-      acct: state.acct, acct2: state.acct2, snap: state.snap,
+      acct: state.acct, acct2: state.acct2, snap: state.snap, origId: state.origId,
       name: $("#cust-name").value, address: $("#cust-address").value, gstin: $("#cust-gstin").value,
       id: $("#inv-id").value, date: state.date, due: state.due, terms: state.terms,
       items: state.items.map(({ desc, qty, rate }) => ({ desc, qty, rate })),
@@ -718,13 +753,13 @@ table.list tr.click:hover td { background: var(--shell); }
   function freshForm(mode) {
     const country = mode === "intl" ? (profile.intlCountry || "US") : "IN";
     return {
-      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null,
+      mode, country, currency: mode === "intl" ? (COUNTRIES[country] || COUNTRIES.US).cur : "INR", status: "new", email: "", contact: "", acct: "auto", acct2: "", snap: null, origId: null,
       name: "", address: "", gstin: "", id: nextId(todayISO()), date: todayISO(), due: "", terms: profile.due || "m1",
       items: [{ desc: "", qty: 1, rate: "" }], discount: "", gst: mode === "intl" ? "" : (profile.gst || ""), notes: "", fx: "",
     };
   }
   function setForm(f) {
-    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms, email: f.email || "", contact: f.contact || "", acct: f.acct || "auto", acct2: f.acct2 || "", snap: f.snap || null });
+    Object.assign(state, { mode: f.mode, currency: f.currency, country: f.country, status: f.status, date: f.date, due: f.due, terms: f.terms, email: f.email || "", contact: f.contact || "", acct: f.acct || "auto", acct2: f.acct2 || "", snap: f.snap || null, origId: f.origId || null });
     if (state.status === "new" && isAutoId(f.id)) f.id = nextId(f.date);
     $("#cust-name").value = f.name; $("#cust-address").value = f.address; $("#cust-gstin").value = f.gstin;
     $("#inv-id").value = f.id; $("#discount").value = f.discount; $("#gst-pct").value = f.gst; $("#notes").value = f.notes; $("#fx").value = f.fx || "";
@@ -738,7 +773,7 @@ table.list tr.click:hover td { background: var(--shell); }
     const c = inv.customer || {};
     return {
       mode, currency: inv.currency || "INR", country: inv.country || c.country || (mode === "intl" ? "US" : "IN"), status: inv.status || "sent", email: c.email || "", contact: c.contact || "",
-      acct: inv.account?.id || "auto", acct2: inv.account2?.id || "", snap: inv.account ? { a: inv.account, b: inv.account2 || null } : null,
+      acct: inv.account?.id || "auto", acct2: inv.account2?.id || "", snap: inv.account ? { a: inv.account, b: inv.account2 || null } : null, origId: inv.id,
       name: c.name || "", address: c.address || "", gstin: c.gstin || "", id: inv.id, date: inv.date, due: inv.due, terms,
       items: inv.items || [], discount: inv.discount || "", gst: inv.gstOn === false ? "" : (inv.gstPct || ""), notes: inv.notes || "", fx: inv.fx || "",
     };
@@ -1198,7 +1233,8 @@ ${text}
     $("#fx-hint").textContent = d.fx && d.calc.total ? `About ${money(d.calc.total * d.fx, "INR")}. Not printed on the invoice.` : "Not printed on the invoice. Shows the rupee value in your invoice list.";
     $("#paper").innerHTML = paperHTML(d);
     $("#file-name").textContent = fileName(d.c, d.calc);
-    $("#create-title").textContent = state.status === "new" ? (isIntl() ? "Create International Invoice" : "Create New Invoice") : `Invoice ${d.id}`;
+    $("#create-title").textContent = !state.origId ? (isIntl() ? "Create International Invoice" : "Create New Invoice") : `Edit Invoice ${d.id}`;
+    $("#save-draft-txt").textContent = state.origId ? "Save changes" : "Save as Draft";
   }
 
   function fit() {
@@ -1227,19 +1263,23 @@ ${text}
   }
   async function persist(d, status) {
     if (!d.id) $("#inv-id").value = d.id = nextId(state.date);
+    const orig = state.origId;
+    if (history.some((h) => h.id === d.id) && d.id !== orig) throw new Error(`${d.id} is already used by another invoice. Click Generate for the next free number.`);
     const customer = { ...d.c, id: d.c.id || slug(d.c.name), short: d.c.short || shortFrom(d.c.name) };
-    const prev = history.find((h) => h.id === d.id);
+    const prev = history.find((h) => h.id === (orig || d.id));
     const inv = {
       id: d.id, mode: d.mode, currency: d.cur, country: d.country, fx: d.fx || 0,
       date: state.date, due: state.due, terms: state.terms,
       items: d.calc.lines.filter((l) => l.desc || l.rate).map(({ desc, qty, rate }) => ({ desc, qty, rate })),
       discount: d.calc.discount, gstPct: d.calc.pct, total: d.calc.total, notes: d.notes,
       account: d.accts.a ? { ...d.accts.a } : null, account2: d.accts.b ? { ...d.accts.b } : null,
-      customer, status: prev?.status === "paid" ? "paid" : status, createdAt: prev?.createdAt || new Date().toISOString(),
+      customer, status: status === "keep" ? (prev?.status || "draft") : prev?.status === "paid" ? "paid" : status,
+      createdAt: prev?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
     const results = await Promise.allSettled([Store.saveCustomer(customer), Store.saveInvoice(inv)]);
+    if (results[1].status === "fulfilled" && orig && orig !== inv.id) { await Store.deleteInvoice(orig).catch(() => {}); history = history.filter((h) => h.id !== orig); }
     customers = customers.filter((c) => c.id !== customer.id).concat(customer);
-    history = [inv, ...history.filter((h) => h.id !== inv.id)];
+    if (results[1].status === "fulfilled") { history = [inv, ...history.filter((h) => h.id !== inv.id)]; state.origId = inv.id; }
     state.status = inv.status;
     refreshSuggestions(); syncCustomerHint(); update();
     if (results.some((r) => r.status === "rejected")) throw new Error("Could not save the invoice. Check your connection and try again.");
@@ -1263,7 +1303,8 @@ ${text}
     const d = currentData();
     if (!validate(d)) return;
     const b = $("#save-draft"); b.disabled = true;
-    try { const { inv } = await persist(d, "draft"); setMsg(`Saved ${inv.id} as a draft.`, "ok"); }
+    const editing = !!state.origId;
+    try { const { inv } = await persist(d, editing ? "keep" : "draft"); setMsg(editing ? `Saved changes to ${inv.id}.` : `Saved ${inv.id} as a draft.`, "ok"); }
     catch (err) { setMsg(err.message, "err"); }
     finally { b.disabled = false; }
   }
@@ -1295,8 +1336,19 @@ ${text}
       .slice(0, 40).map((d) => `<option value="${esc(d)}"></option>`).join("");
   }
 
-  /* ---------------- Invoices view ---------------- */
-  function renderInvoices() {
+  /* ---------------- Invoices view (list, search, edit, duplicate, delete) ---------------- */
+  const listF = { q: "", status: "", type: "" };
+  const picked = new Set();
+  function filteredInvoices() {
+    const q = listF.q.trim().toLowerCase();
+    return history.filter((inv) => {
+      if (listF.status && statusOf(inv).key !== listF.status) return false;
+      if (listF.type && (inv.mode === "intl" ? "intl" : "dom") !== listF.type) return false;
+      if (!q) return true;
+      return [inv.id, inv.customer?.name, inv.notes, ...(inv.items || []).map((i) => i.desc)].some((v) => String(v || "").toLowerCase().includes(q));
+    });
+  }
+  function renderStats() {
     const by = (arr) => arr.reduce((m, x) => { const k = x.currency || "INR"; m[k] = round2((m[k] || 0) + (x.total || 0)); return m; }, {});
     const st = history.map((h) => ({ h, s: statusOf(h).key }));
     const pick = (...keys) => st.filter((x) => keys.includes(x.s)).map((x) => x.h);
@@ -1305,33 +1357,109 @@ ${text}
       <div class="stat"><span>Waiting for payment · ${open.length}</span><b>${esc(moneyMix(by(open)))}</b></div>
       <div class="stat"><span>Overdue · ${overdue.length}</span><b>${esc(moneyMix(by(overdue)))}</b></div>
       <div class="stat"><span>Paid · ${paid.length}</span><b>${esc(moneyMix(by(paid)))}</b></div>`;
+  }
+  function syncBulk() {
+    const n = picked.size;
+    $("#inv-bulk").hidden = !n;
+    $("#bulk-n").textContent = `${n} selected`;
+    $("#bulk-confirm").hidden = true; $("#bulk-del").hidden = false;
+    $("#bulk-confirm-n").textContent = n === 1 ? "this invoice" : `${n} invoices`;
+  }
+  function renderInvoices() {
+    renderStats();
+    for (const id of [...picked]) if (!history.some((h) => h.id === id)) picked.delete(id);
     const box = $("#inv-table");
-    if (!history.length) { box.innerHTML = '<p class="empty">No invoices yet. Pick Domestic or International above to make your first one.</p>'; return; }
-    box.innerHTML = `<table class="list"><thead><tr><th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>`;
+    const list = filteredInvoices();
+    $("#inv-count").textContent = !history.length ? "" : list.length === history.length ? `${history.length} invoice${history.length === 1 ? "" : "s"}` : `${list.length} of ${history.length}`;
+    syncBulk();
+    if (!history.length) { box.innerHTML = '<p class="empty">No invoices yet. Click New Invoice, or pick Domestic or International above.</p>'; return; }
+    if (!list.length) {
+      box.innerHTML = '<p class="empty">No invoices match these filters. <button type="button" class="linkish" id="clear-f">Clear filters</button></p>';
+      $("#clear-f").addEventListener("click", () => { listF.q = listF.status = listF.type = ""; $("#inv-q").value = ""; $("#inv-status").value = ""; $("#inv-type").value = ""; renderInvoices(); });
+      return;
+    }
+    const allPicked = list.every((i) => picked.has(i.id));
+    box.innerHTML = `<table class="list"><thead><tr>
+      <th style="width:28px"><input type="checkbox" class="pick" id="pick-all" aria-label="Select all shown"${allPicked ? " checked" : ""}></th>
+      <th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th class="r">Actions</th></tr></thead><tbody></tbody></table>`;
+    $("#pick-all").addEventListener("change", (e) => { list.forEach((i) => e.target.checked ? picked.add(i.id) : picked.delete(i.id)); renderInvoices(); });
     const tb = box.querySelector("tbody");
-    history.forEach((inv) => {
+    list.forEach((inv) => {
       const s = statusOf(inv);
       const cur = inv.currency || "INR";
       const type = inv.mode === "intl" ? `International · ${esc((COUNTRIES[inv.country] || COUNTRIES.XX).name)}` : "Domestic";
       const inr = cur !== "INR" && inv.fx ? `<div class="hint">≈ ${money(inv.total * inv.fx, "INR")}</div>` : "";
+      const stored = inv.status === "paid" ? "paid" : inv.status === "draft" ? "draft" : "sent";
       const tr = document.createElement("tr"); tr.className = "click";
-      tr.innerHTML = `<td>${esc(inv.id)}</td><td class="cust-cell">${esc(inv.customer?.name || "")}</td><td>${type}</td><td>${esc(shortDate(inv.date))}</td><td>${esc(shortDate(inv.due))}</td>
-        <td class="r">${money(inv.total || 0, cur)}${inr}</td><td><span class="chip ${s.key}">${s.label}</span></td>
-        <td class="r"><button type="button" class="linkish" data-act="paid">${inv.status === "paid" ? "Mark unpaid" : "Mark paid"}</button></td>`;
-      tr.addEventListener("click", async (e) => {
-        if (e.target.closest('[data-act="paid"]')) {
-          e.stopPropagation();
-          const upd = { ...inv, status: inv.status === "paid" ? "sent" : "paid" };
-          try { await Store.saveInvoice(upd); history = history.map((h) => h.id === upd.id ? upd : h); renderInvoices(); }
-          catch { tr.querySelector('[data-act="paid"]').textContent = "Could not save, try again"; }
-          return;
-        }
-        drafts[state.mode] = getForm();
-        go("create", { form: formFromInvoice(inv) });
-      });
+      tr.innerHTML = `
+        <td><input type="checkbox" class="pick" aria-label="Select ${esc(inv.id)}"${picked.has(inv.id) ? " checked" : ""}></td>
+        <td>${esc(inv.id)}</td><td class="cust-cell">${esc(inv.customer?.name || "")}</td><td>${type}</td>
+        <td>${esc(shortDate(inv.date))}</td><td>${esc(shortDate(inv.due))}</td>
+        <td class="r">${money(inv.total || 0, cur)}${inr}</td>
+        <td><div class="st-cell"><select class="inp st-sel st-${s.key}" aria-label="Status of ${esc(inv.id)}">
+          <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option></select>${s.key === "overdue" ? '<span class="chip overdue">Overdue</span>' : ""}</div></td>
+        <td class="r"><div class="row-actions">
+          <button type="button" class="act" data-act="open">Edit</button>
+          <button type="button" class="act" data-act="dup">Duplicate</button>
+          <button type="button" class="act" data-act="pdf">PDF</button>
+          <button type="button" class="act danger" data-act="del">Delete</button>
+          <span class="confirm" hidden>Delete ${esc(inv.id)}? <button type="button" class="linkish danger" data-act="yes">Delete</button> · <button type="button" class="linkish" data-act="no">Keep</button></span>
+        </div></td>`;
+      tr.querySelector(".st-sel").value = stored;
+      tr.querySelector(".pick").addEventListener("change", (e) => { e.target.checked ? picked.add(inv.id) : picked.delete(inv.id); renderInvoices(); });
+      tr.querySelector(".st-sel").addEventListener("change", (e) => setStatuses([inv.id], e.target.value));
+      const btns = tr.querySelectorAll(".act");
+      const conf = tr.querySelector(".confirm");
+      tr.querySelector('[data-act="del"]').addEventListener("click", () => { btns.forEach((b) => { b.hidden = true; }); conf.hidden = false; });
+      tr.querySelector('[data-act="no"]').addEventListener("click", () => { btns.forEach((b) => { b.hidden = false; }); conf.hidden = true; });
+      tr.querySelector('[data-act="yes"]').addEventListener("click", () => deleteInvoices([inv.id]));
+      tr.querySelector('[data-act="open"]').addEventListener("click", () => openInvoice(inv));
+      tr.querySelector('[data-act="dup"]').addEventListener("click", () => duplicateInvoice(inv));
+      tr.querySelector('[data-act="pdf"]').addEventListener("click", () => { openInvoice(inv); setTimeout(download, 50); });
+      tr.addEventListener("click", (e) => { if (e.target.closest("input, select, button, .confirm")) return; openInvoice(inv); });
       tb.appendChild(tr);
     });
   }
+  function openInvoice(inv) { drafts[state.mode] = getForm(); go("create", { form: formFromInvoice(inv) }); }
+  function duplicateInvoice(inv) {
+    const f = formFromInvoice(inv);
+    f.status = "new"; f.origId = null; f.date = todayISO(); f.id = nextId(f.date); f.due = "";
+    if (f.terms === "custom") f.terms = profile.due || "m1";
+    drafts[state.mode] = getForm();
+    go("create", { form: f });
+    setMsg(`Copied ${inv.id} as a new invoice dated today. Check it, then save or download.`, "ok");
+  }
+  async function setStatuses(ids, status) {
+    const upd = history.filter((h) => ids.includes(h.id)).map((h) => ({ ...h, status }));
+    const res = await Promise.allSettled(upd.map((u) => Store.saveInvoice(u)));
+    const ok = upd.filter((_, i) => res[i].status === "fulfilled");
+    history = history.map((h) => ok.find((u) => u.id === h.id) || h);
+    if (ok.some((u) => u.id === state.origId)) state.status = status;
+    renderInvoices();
+    if (ok.length < upd.length) $("#inv-count").textContent = "Some changes could not be saved. Try again.";
+  }
+  async function deleteInvoices(ids) {
+    const res = await Promise.allSettled(ids.map((id) => Store.deleteInvoice(id)));
+    const gone = ids.filter((_, i) => res[i].status === "fulfilled");
+    history = history.filter((h) => !gone.includes(h.id));
+    gone.forEach((id) => picked.delete(id));
+    if (gone.includes(state.origId)) { state.origId = null; state.status = "new"; $("#inv-id").value = nextId(state.date); update(); }
+    for (const m of Object.keys(drafts)) if (drafts[m] && gone.includes(drafts[m].origId)) { drafts[m].origId = null; drafts[m].status = "new"; }
+    refreshSuggestions(); renderInvoices();
+    if (gone.length < ids.length) $("#inv-count").textContent = "Some invoices could not be deleted. Try again.";
+  }
+  $("#inv-q").addEventListener("input", (e) => { listF.q = e.target.value; renderInvoices(); });
+  $("#inv-status").addEventListener("change", (e) => { listF.status = e.target.value; renderInvoices(); });
+  $("#inv-type").addEventListener("change", (e) => { listF.type = e.target.value; renderInvoices(); });
+  $("#inv-bulk").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-bulk]"); if (!b) return;
+    const ids = [...picked];
+    if (b.dataset.bulk === "paid" || b.dataset.bulk === "sent") setStatuses(ids, b.dataset.bulk);
+    else if (b.dataset.bulk === "del") { $("#bulk-confirm").hidden = false; $("#bulk-del").hidden = true; }
+    else if (b.dataset.bulk === "no") { $("#bulk-confirm").hidden = true; $("#bulk-del").hidden = false; }
+    else if (b.dataset.bulk === "yes") deleteInvoices(ids);
+    else if (b.dataset.bulk === "clear") { picked.clear(); renderInvoices(); }
+  });
 
   /* ---------------- Customers view ---------------- */
   function renderCustomers() {
