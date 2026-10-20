@@ -256,8 +256,15 @@ table.list tr.click:hover td { background: var(--shell); }
 .stat b { font-size: 22px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
 .empty { color: var(--muted); font-size: 13.5px; padding: 18px 4px; margin: 0; }
-.cust-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.cust-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 14px; align-items: start; }
 .cust-card .panel-b { gap: 12px; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin: 0; }
+.kv > div { min-width: 0; }
+.kv .wide { grid-column: 1 / -1; }
+.kv dt { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.kv dd { margin: 0; font-size: 13.5px; overflow-wrap: anywhere; }
+.kv dd.pre { white-space: pre-line; }
+.kv .none { color: var(--faint); }
 .card-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .card-actions .sp { flex: 1; }
 .linkish { border: 0; background: none; padding: 0; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
@@ -1556,50 +1563,48 @@ ${text}
   });
 
   /* ---------------- Customers view ---------------- */
+  const editingCust = new Set();
   function renderCustomers() {
     const box = $("#cust-cards");
     if (!customers.length) { box.innerHTML = '<div class="panel"><p class="empty" style="padding:18px">No customers yet. They appear here after your first invoice.</p></div>'; return; }
     box.innerHTML = "";
     [...customers].sort((a, b) => a.name.localeCompare(b.name)).forEach((c) => {
-      const count = history.filter((h) => h.customer?.id === c.id).length;
       const card = document.createElement("form");
       card.className = "panel cust-card";
-      const countrySel = c.intl ? `<div class="row c-half">
-            <div class="f"><label>Country</label><select class="inp" name="country">${countryOpts}</select></div>
-            <div class="f"><label>Currency</label><select class="inp" name="currency">${$("#currency").innerHTML}</select></div></div>` : "";
-      card.innerHTML = `
-        <div class="panel-h"><h2>${esc(c.name)}<span class="badge">${c.intl ? `International · ${esc(c.currency || "USD")}` : "Domestic"}</span></h2><span class="note">${count} invoice${count === 1 ? "" : "s"}</span></div>
+      card.noValidate = true;
+      renderCustomerCard(card, c.id);
+      box.appendChild(card);
+    });
+  }
+  function renderCustomerCard(card, id, note) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) { card.remove(); return; }
+    const editing = editingCust.has(id);
+    const count = history.filter((h) => h.customer?.id === c.id).length;
+    const val = (v) => (v ? esc(v) : '<span class="none">Not added</span>');
+    const taxLabel = c.intl ? (COUNTRIES[c.country] || COUNTRIES.XX).tax : "GST number";
+    const head = `<div class="panel-h"><h2>${esc(c.name)}<span class="badge">${c.intl ? `International · ${esc(c.currency || "USD")}` : "Domestic"}</span></h2><span class="note">${count} invoice${count === 1 ? "" : "s"}</span></div>`;
+    if (!editing) {
+      card.innerHTML = `${head}
         <div class="panel-b">
-          <div class="f"><label>Name</label><input class="inp" name="name" value="${esc(c.name)}"></div>
-          <div class="f"><label>Billing address</label><textarea class="inp" name="address" rows="3">${esc(c.address)}</textarea></div>
-          ${countrySel}
-          <div class="row c-half">
-            <div class="f"><label>Accounts contact</label><input class="inp" name="contact" value="${esc(c.contact)}" placeholder="Not printed"></div>
-            <div class="f"><label>Accounts email</label><input class="inp" name="email" type="email" value="${esc(c.email)}" placeholder="Where to send invoices"></div>
-          </div>
-          <div class="row c-half">
-            <div class="f"><label>${c.intl ? "Tax ID (VAT / EIN)" : "GST number"}</label><input class="inp" name="gstin" value="${esc(c.gstin)}"></div>
-            <div class="f"><label>Short name (for file names)</label><input class="inp" name="short" value="${esc(c.short)}"></div>
-          </div>
+          <dl class="kv">
+            <div class="wide"><dt>Billing address</dt><dd class="pre">${val(c.address)}</dd></div>
+            ${c.intl ? `<div><dt>Country</dt><dd>${esc((COUNTRIES[c.country] || COUNTRIES.XX).name)}</dd></div><div><dt>Currency</dt><dd>${esc(c.currency || "USD")} · ${esc(curOf(c.currency || "USD").sym.trim())}</dd></div>` : ""}
+            <div><dt>Accounts contact</dt><dd>${val(c.contact)}</dd></div>
+            <div><dt>Accounts email</dt><dd>${val(c.email)}</dd></div>
+            <div><dt>${esc(taxLabel)}</dt><dd>${val(c.gstin)}</dd></div>
+            <div><dt>Short name (for file names)</dt><dd>${val(c.short)}</dd></div>
+          </dl>
           <div class="card-actions">
-            <button type="submit" class="btn sm">Save</button>
+            <button type="button" class="btn sm" data-act="edit"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>Edit</button>
             <button type="button" class="btn sm" data-act="new">New invoice</button>
             <span class="sp"></span>
             <span class="confirm" hidden>Delete this customer? <button type="button" class="linkish danger" data-act="yes">Delete</button> · <button type="button" class="linkish" data-act="no">Keep</button></span>
             <button type="button" class="linkish danger" data-act="del">Delete</button>
           </div>
-          <p class="hint" data-msg></p>
+          <p class="hint" data-msg>${note ? esc(note) : ""}</p>
         </div>`;
-      if (c.intl) { card.elements.country.value = COUNTRIES[c.country] ? c.country : "XX"; card.elements.currency.value = c.currency || "USD"; }
-      const msg = card.querySelector("[data-msg]");
-      card.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const f = new FormData(card);
-        const upd = { ...c, name: String(f.get("name")).trim() || c.name, address: String(f.get("address")).trim(), gstin: String(f.get("gstin")).trim().toUpperCase(), short: String(f.get("short")).trim(), contact: String(f.get("contact")).trim(), email: String(f.get("email")).trim() };
-        if (c.intl) { upd.country = String(f.get("country")); upd.currency = String(f.get("currency")); }
-        try { await Store.saveCustomer(upd); customers = customers.map((x) => x.id === c.id ? upd : x); msg.textContent = "Saved."; renderCustomers(); }
-        catch { msg.textContent = "Could not save. Try again."; }
-      });
+      card.querySelector('[data-act="edit"]').addEventListener("click", () => { editingCust.add(id); renderCustomerCard(card, id); card.elements.name?.focus(); });
       card.querySelector('[data-act="new"]').addEventListener("click", () => {
         go("create", { mode: c.intl ? "intl" : "dom", fresh: true });
         pickCustomer(c);
@@ -1609,11 +1614,51 @@ ${text}
       del.addEventListener("click", () => { conf.hidden = false; del.hidden = true; });
       card.querySelector('[data-act="no"]').addEventListener("click", () => { conf.hidden = true; del.hidden = false; });
       card.querySelector('[data-act="yes"]').addEventListener("click", async () => {
-        try { await Store.deleteCustomer(c.id); customers = customers.filter((x) => x.id !== c.id); renderCustomers(); }
-        catch { msg.textContent = "Could not delete. Try again."; }
+        try { await Store.deleteCustomer(c.id); customers = customers.filter((x) => x.id !== c.id); editingCust.delete(id); renderCustomers(); }
+        catch { card.querySelector("[data-msg]").textContent = "Could not delete. Try again."; }
       });
-      box.appendChild(card);
-    });
+      card.onsubmit = (e) => e.preventDefault();
+      return;
+    }
+    const countrySel = c.intl ? `<div class="row c-half">
+          <div class="f"><label>Country</label><select class="inp" name="country">${countryOpts}</select></div>
+          <div class="f"><label>Currency</label><select class="inp" name="currency">${$("#currency").innerHTML}</select></div></div>` : "";
+    card.innerHTML = `${head}
+      <div class="panel-b">
+        <div class="f"><label>Name</label><input class="inp" name="name" value="${esc(c.name)}"></div>
+        <div class="f"><label>Billing address</label><textarea class="inp" name="address" rows="3">${esc(c.address)}</textarea></div>
+        ${countrySel}
+        <div class="row c-half">
+          <div class="f"><label>Accounts contact</label><input class="inp" name="contact" value="${esc(c.contact)}" placeholder="Not printed"></div>
+          <div class="f"><label>Accounts email</label><input class="inp" name="email" type="email" value="${esc(c.email)}" placeholder="Where to send invoices"></div>
+        </div>
+        <div class="row c-half">
+          <div class="f"><label>${c.intl ? "Tax ID (VAT / EIN)" : "GST number"}</label><input class="inp" name="gstin" value="${esc(c.gstin)}"></div>
+          <div class="f"><label>Short name (for file names)</label><input class="inp" name="short" value="${esc(c.short)}"></div>
+        </div>
+        <div class="card-actions">
+          <button type="submit" class="btn sm ink">Save</button>
+          <button type="button" class="btn sm" data-act="cancel">Cancel</button>
+        </div>
+        <p class="hint" data-msg></p>
+      </div>`;
+    if (c.intl) { card.elements.country.value = COUNTRIES[c.country] ? c.country : "XX"; card.elements.currency.value = c.currency || "USD"; }
+    const cancel = () => { editingCust.delete(id); renderCustomerCard(card, id); card.querySelector('[data-act="edit"]')?.focus(); };
+    card.querySelector('[data-act="cancel"]').addEventListener("click", cancel);
+    card.onkeydown = (e) => { if (e.key === "Escape") { e.preventDefault(); cancel(); } };
+    card.onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(card);
+      const upd = { ...c, name: String(f.get("name")).trim() || c.name, address: String(f.get("address")).trim(), gstin: String(f.get("gstin")).trim().toUpperCase(), short: String(f.get("short")).trim(), contact: String(f.get("contact")).trim(), email: String(f.get("email")).trim() };
+      if (c.intl) { upd.country = String(f.get("country")); upd.currency = String(f.get("currency")); }
+      const btn = card.querySelector('button[type="submit"]'); btn.disabled = true;
+      try {
+        await Store.saveCustomer(upd);
+        customers = customers.map((x) => x.id === c.id ? upd : x);
+        editingCust.delete(id); card.onkeydown = null;
+        renderCustomerCard(card, id, "Saved.");
+      } catch { btn.disabled = false; card.querySelector("[data-msg]").textContent = "Could not save. Try again."; }
+    };
   }
 
   /* ---------------- Details view ---------------- */
