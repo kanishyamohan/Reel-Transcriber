@@ -53,6 +53,7 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
@@ -164,10 +165,18 @@ select.inp { appearance: none; background-image: linear-gradient(45deg, transpar
 .toolbar select.inp { flex: 0 1 170px; width: auto; }
 .bulk { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--shell); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
 .bulk .sp { flex: 1; }
-.row-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; flex-wrap: nowrap; }
-.act { border: 1px solid var(--line); background: var(--panel); border-radius: 7px; padding: 5px 9px; font-size: 12px; font-weight: 600; }
-.act:hover { border-color: var(--line-strong); }
-.act.danger:hover { color: var(--req); border-color: var(--req); }
+.kebab { width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); display: inline-grid; place-items: center; }
+.kebab:hover, .kebab[aria-expanded="true"] { background: var(--shell); border-color: var(--line); color: var(--fg); }
+.kebab svg { width: 18px; height: 18px; fill: currentColor; }
+.row-menu { position: fixed; z-index: 60; width: 216px; max-width: calc(100vw - 16px); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(20,22,26,.16); padding: 6px; display: grid; gap: 2px; }
+.row-menu button.mi { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.row-menu button.mi:hover, .row-menu button.mi:focus-visible { background: var(--shell); outline: none; }
+.row-menu button.mi svg.i { width: 16px; height: 16px; color: var(--muted); }
+.row-menu .sep { height: 1px; background: var(--line); margin: 4px 2px; }
+.row-menu .mi.danger, .row-menu .mi.danger svg.i { color: var(--req); }
+.row-menu .confirm-box { padding: 8px 10px; display: grid; gap: 8px; font-size: 13px; }
+.row-menu .confirm-box .card-actions { gap: 6px; }
+.btn.danger { background: var(--req); border-color: var(--req); color: #fff; }
 .st-cell { display: flex; gap: 6px; align-items: center; }
 select.inp.st-sel { width: auto; padding: 5px 26px 5px 9px; font-size: 12px; font-weight: 600; border-radius: 999px; background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%; }
 .st-sel.st-paid { background-color: var(--ok-bg); color: var(--ok); border-color: transparent; }
@@ -226,7 +235,8 @@ input[type="checkbox"].pick { width: 16px; height: 16px; accent-color: var(--ink
 @media (max-width: 560px) { .desk { margin: 10px; padding: 10px; } }
 
 /* Lists (invoices, customers) */
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; min-width: 0; position: relative; }
+.panel-b > * { min-width: 0; }
 table.list { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 table.list th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; background: var(--shell); padding: 9px 12px; white-space: nowrap; }
 table.list th:first-child { border-radius: 9px 0 0 9px; } table.list th:last-child { border-radius: 0 9px 9px 0; }
@@ -602,6 +612,19 @@ table.list tr.click:hover td { background: var(--shell); }
   </section>
 </div>
 
+<div class="row-menu" id="row-menu" role="menu" hidden>
+  <div id="rm-items" style="display:grid;gap:2px">
+    <button type="button" class="mi" role="menuitem" data-mi="open"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>Edit</button>
+    <button type="button" class="mi" role="menuitem" data-mi="dup"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Duplicate</button>
+    <button type="button" class="mi" role="menuitem" data-mi="pdf"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Download PDF</button>
+    <div class="sep" role="separator"></div>
+    <button type="button" class="mi danger" role="menuitem" data-mi="del"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Delete</button>
+  </div>
+  <div class="confirm-box" id="rm-confirm" hidden>
+    <span id="rm-confirm-text"></span>
+    <div class="card-actions"><button type="button" class="btn sm danger" data-mi="yes">Delete</button><button type="button" class="btn sm" data-mi="no">Cancel</button></div>
+  </div>
+</div>
 <div class="capture-host" id="capture-host" aria-hidden="true"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1419,9 +1442,10 @@ ${text}
       return;
     }
     const allPicked = list.every((i) => picked.has(i.id));
+    closeRowMenu();
     box.innerHTML = `<table class="list"><thead><tr>
       <th style="width:28px"><input type="checkbox" class="pick" id="pick-all" aria-label="Select all shown"${allPicked ? " checked" : ""}></th>
-      <th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th class="r">Actions</th></tr></thead><tbody></tbody></table>`;
+      <th>Invoice No.</th><th>Customer</th><th>Type</th><th>Issue date</th><th>Due</th><th class="r">Amount</th><th>Status</th><th class="r" style="width:48px"><span class="sr-only">Actions</span></th></tr></thead><tbody></tbody></table>`;
     $("#pick-all").addEventListener("change", (e) => { list.forEach((i) => e.target.checked ? picked.add(i.id) : picked.delete(i.id)); renderInvoices(); });
     const tb = box.querySelector("tbody");
     list.forEach((inv) => {
@@ -1438,28 +1462,58 @@ ${text}
         <td class="r">${money(inv.total || 0, cur)}${inr}</td>
         <td><div class="st-cell"><select class="inp st-sel st-${s.key}" aria-label="Status of ${esc(inv.id)}">
           <option value="draft">Draft</option><option value="sent">Sent</option><option value="paid">Paid</option></select>${s.key === "overdue" ? '<span class="chip overdue">Overdue</span>' : ""}</div></td>
-        <td class="r"><div class="row-actions">
-          <button type="button" class="act" data-act="open">Edit</button>
-          <button type="button" class="act" data-act="dup">Duplicate</button>
-          <button type="button" class="act" data-act="pdf">PDF</button>
-          <button type="button" class="act danger" data-act="del">Delete</button>
-          <span class="confirm" hidden>Delete ${esc(inv.id)}? <button type="button" class="linkish danger" data-act="yes">Delete</button> · <button type="button" class="linkish" data-act="no">Keep</button></span>
-        </div></td>`;
+        <td class="r"><button type="button" class="kebab" aria-label="Actions for ${esc(inv.id)}" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button></td>`;
       tr.querySelector(".st-sel").value = stored;
       tr.querySelector(".pick").addEventListener("change", (e) => { e.target.checked ? picked.add(inv.id) : picked.delete(inv.id); renderInvoices(); });
       tr.querySelector(".st-sel").addEventListener("change", (e) => setStatuses([inv.id], e.target.value));
-      const btns = tr.querySelectorAll(".act");
-      const conf = tr.querySelector(".confirm");
-      tr.querySelector('[data-act="del"]').addEventListener("click", () => { btns.forEach((b) => { b.hidden = true; }); conf.hidden = false; });
-      tr.querySelector('[data-act="no"]').addEventListener("click", () => { btns.forEach((b) => { b.hidden = false; }); conf.hidden = true; });
-      tr.querySelector('[data-act="yes"]').addEventListener("click", () => deleteInvoices([inv.id]));
-      tr.querySelector('[data-act="open"]').addEventListener("click", () => openInvoice(inv));
-      tr.querySelector('[data-act="dup"]').addEventListener("click", () => duplicateInvoice(inv));
-      tr.querySelector('[data-act="pdf"]').addEventListener("click", () => { openInvoice(inv); setTimeout(download, 50); });
-      tr.addEventListener("click", (e) => { if (e.target.closest("input, select, button, .confirm")) return; openInvoice(inv); });
+      tr.querySelector(".kebab").addEventListener("click", (e) => { e.stopPropagation(); openRowMenu(e.currentTarget, inv); });
+      tr.addEventListener("click", (e) => { if (e.target.closest("input, select, button")) return; openInvoice(inv); });
       tb.appendChild(tr);
     });
   }
+  let menuInv = null, menuBtn = null;
+  function openRowMenu(btn, inv) {
+    if (menuBtn === btn) return closeRowMenu();
+    closeRowMenu();
+    menuInv = inv; menuBtn = btn;
+    const m = $("#row-menu");
+    $("#rm-items").hidden = false; $("#rm-confirm").hidden = true;
+    m.hidden = false; btn.setAttribute("aria-expanded", "true");
+    const r = btn.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    const top = r.bottom + 4 + mh > window.innerHeight - 8 ? Math.max(8, r.top - 4 - mh) : r.bottom + 4;
+    m.style.top = top + "px";
+    m.style.left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw)) + "px";
+    m.querySelector(".mi").focus({ preventScroll: true });
+  }
+  function closeRowMenu(refocus) {
+    const m = $("#row-menu"); if (m.hidden) return;
+    m.hidden = true;
+    if (menuBtn) { menuBtn.setAttribute("aria-expanded", "false"); if (refocus) menuBtn.focus(); }
+    menuInv = null; menuBtn = null;
+  }
+  $("#row-menu").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mi]"); if (!b || !menuInv) return;
+    const inv = menuInv, act = b.dataset.mi;
+    if (act === "del") { $("#rm-items").hidden = true; $("#rm-confirm").hidden = false; $("#rm-confirm-text").textContent = `Delete ${inv.id}? This can't be undone.`; $("#rm-confirm .btn").focus(); return; }
+    if (act === "no") { $("#rm-items").hidden = false; $("#rm-confirm").hidden = true; $("#row-menu .mi.danger").focus(); return; }
+    closeRowMenu();
+    if (act === "yes") deleteInvoices([inv.id]);
+    else if (act === "open") openInvoice(inv);
+    else if (act === "dup") duplicateInvoice(inv);
+    else if (act === "pdf") { openInvoice(inv); setTimeout(download, 50); }
+  });
+  $("#row-menu").addEventListener("keydown", (e) => {
+    const items = [...$("#row-menu").querySelectorAll("button:not([hidden])")].filter((b) => b.offsetParent);
+    const i = items.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+    else if (e.key === "Escape") { e.preventDefault(); closeRowMenu(true); }
+    else if (e.key === "Tab") closeRowMenu();
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest("#row-menu, .kebab")) closeRowMenu(); });
+  window.addEventListener("resize", () => closeRowMenu());
+  window.addEventListener("scroll", () => closeRowMenu(), true);
   function openInvoice(inv) { drafts[state.mode] = getForm(); go("create", { form: formFromInvoice(inv) }); }
   function duplicateInvoice(inv) {
     const f = formFromInvoice(inv);
